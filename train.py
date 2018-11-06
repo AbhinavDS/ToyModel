@@ -4,7 +4,7 @@ from torch import optim
 import numpy as np
 import random
 import dataLoader
-import chamfer_loss
+import chamfer_loss,separation_loss
 from torch.autograd import Variable
 if torch.cuda.is_available():
     dtype = torch.cuda.FloatTensor
@@ -15,8 +15,11 @@ class Deformer(nn.Module):
         super(Deformer, self).__init__()
         self.feature_size = feature_size
         self.dim_size = dim_size#Coordinate dimension
-        self.W = nn.Linear(2*self.feature_size,self.feature_size)
-        self.W_n = nn.Linear(2*self.feature_size,self.feature_size)
+        self.W_1 = nn.Linear(2*self.feature_size,self.feature_size)
+        self.W_n_1 = nn.Linear(2*self.feature_size,self.feature_size)
+        self.W_2 = nn.Linear(self.feature_size,self.feature_size)
+        self.W_n_2 = nn.Linear(self.feature_size,self.feature_size)
+        
         #self.W_s = nn.Linear(self.feature_size,self.feature_size)
         #self.W_x = nn.Linear(self.feature_size,self.feature_size)
         self.W_p_1 = nn.Linear(self.feature_size+self.dim_size,self.feature_size)
@@ -24,8 +27,10 @@ class Deformer(nn.Module):
         self.W_c = nn.Linear(self.feature_size,self.dim_size)
         self.a = nn.Tanh()
         # Initialize weights according to the Xavier Glorot formula
-        nn.init.xavier_uniform_(self.W.weight)
-        nn.init.xavier_uniform_(self.W_n.weight)
+        nn.init.xavier_uniform_(self.W_1.weight)
+        nn.init.xavier_uniform_(self.W_n_1.weight)
+        nn.init.xavier_uniform_(self.W_2.weight)
+        nn.init.xavier_uniform_(self.W_n_2.weight)
         #nn.init.xavier_uniform_(self.W_s.weight)
         #nn.init.xavier_uniform_(self.W_x.weight)
         nn.init.xavier_uniform_(self.W_p_1.weight)
@@ -42,7 +47,8 @@ class Deformer(nn.Module):
         #s = self.a(self.W_s(s_prev) + self.W_x(x_prev))
         feature_from_state = self.a(self.W_p_2(self.a(self.W_p_1(torch.cat((c_prev,s_prev),dim=1)))))
         x = torch.cat((feature_from_state,x_prev),dim=1)
-        x = self.a(self.W(x) + torch.mm(temp_A,self.W_n(x)))#Graph convolution
+        x = self.a(self.W_1(x) + torch.mm(temp_A,self.W_n_1(x)))#Graph convolution
+        x = self.a(self.W_2(x) + torch.mm(temp_A,self.W_n_2(x)))#
         #print(x)
         c = self.a(self.W_c(x))
         #print(c)
@@ -86,12 +92,15 @@ if __name__=="__main__":
     # RUN TRAINING AND TEST
     deformer = Deformer(feature_size,dim_size)
     adder = vertexAdd()
-    criterion = chamfer_loss.ChamferLoss()
+    criterionC = chamfer_loss.ChamferLoss()
+    criterionS = separation_loss.SeparationLoss()
     optimizer = optim.Adam(deformer.parameters(), lr=lr)
     for epoch in range(0, num_epochs):
         ex_indices = [i for i in range(0, len(train_data))]
         random.shuffle(ex_indices)
         total_loss = 0.0
+        total_closs = 0
+        total_sloss = 0
         for idx in ex_indices:
             s = torch.Tensor(train_data[idx]).type(dtype).repeat(3,1)
             c,x,A = dataLoader.inputMesh(feature_size)
@@ -102,12 +111,22 @@ if __name__=="__main__":
             gt.requires_grad = False
             optimizer.zero_grad()
             loss = 0.0
+            closs = 0.0
+            sloss = 0.0
             for block in range(num_blocks):
                 x, c, A = adder.forward(x,c,A)
                 s = torch.cat((s,s),dim=0)
                 x, s, c = deformer.forward(x,s,c,A)
-                loss += criterion(c,gt)
+                closs += criterionC(c,gt)
+                sw = 10
+                if(epoch < 100):
+                    sloss += criterionS(c,gt,A)
+                    loss = closs + sw*sloss
+                else:
+                    loss = closs
                 #w = input("Block over")
+            total_closs +=closs/len(train_data)
+            total_sloss +=sloss/len(train_data)
             total_loss += loss/len(train_data)
             loss.backward()#retain_graph=True)
             optimizer.step()
@@ -115,7 +134,7 @@ if __name__=="__main__":
             dataLoader.drawPolygons(dataLoader.getPixels(c),color='red',out='pred.png')
             dataLoader.drawPolygons(dataLoader.getPixels(gt),color='green',out='gt.png')
             #w = input("Epoch over")
-        print("Loss on epoch %i: %f" % (epoch, total_loss))
+        print("Loss on epoch %i: %f,%f,%f" % (epoch, total_loss,total_closs,total_sloss))
 
     # # Evaluate on the train set
     # train_correct = 0
