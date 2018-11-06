@@ -55,7 +55,7 @@ def clip(x, min, max):
 
 def distance(a,b):
 	return np.sqrt((a[0] - b[0])**2 + (a[1] - b[1])**2)
-def drawPolygons(polygons):
+def drawPolygons(polygons,color='red',out='out.png'):
 	black = (0,0,0)
 	white=(255,255,255)
 	im = Image.new('RGB', (600, 600), white)
@@ -66,15 +66,15 @@ def drawPolygons(polygons):
 		points = tuple(verts)
 		#draw.point((points),fill=(255,0,0,0))
 		for point in points:
-		    draw.ellipse((point[0] - 4, point[1] - 4, point[0]  + 4, point[1] + 4), fill="red")
+		    draw.ellipse((point[0] - 4, point[1] - 4, point[0]  + 4, point[1] + 4), fill=color)
 		draw.polygon((points), outline=black,fill=(0,0,0,0) )
 
 		# # or .line() if you want to control the line thickness, or use both methods together!
 		tupVerts = (points)
 		#draw.line(tupVerts+(tupVerts[0]), width=2, fill=black )
 
-	im.save('out.png')
-DATA_SIZE = 10
+	im.save(out)
+DATA_SIZE = 1
 PAD_TOKEN = ', -1,-1,'
 def writePolygons(file,polygons):
 	for p in range(len(polygons)):
@@ -91,7 +91,7 @@ def writePolygons(file,polygons):
 f = open('polygons.dat','a')
 for i in range(DATA_SIZE):
 	num_polygons = int(np.ceil(abs(3*np.random.randn())))
-	print(num_polygons)
+	num_polygons = 1
 	aveRadius = abs(50*np.random.randn())
 	centers = []
 	radii = []
@@ -118,4 +118,4 @@ for i in range(DATA_SIZE):
 		polygons.append(verts)
 	writePolygons(f,polygons)
 	drawPolygons(polygons)
-	w = input("we")
+	#w = input("we")
