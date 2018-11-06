@@ -19,6 +19,8 @@ class Deformer(nn.Module):
         self.W_n_1 = nn.Linear(2*self.feature_size,self.feature_size)
         self.W_2 = nn.Linear(self.feature_size,self.feature_size)
         self.W_n_2 = nn.Linear(self.feature_size,self.feature_size)
+        self.W_3 = nn.Linear(self.feature_size,self.feature_size)
+        self.W_n_3 = nn.Linear(self.feature_size,self.feature_size)
         
         #self.W_s = nn.Linear(self.feature_size,self.feature_size)
         #self.W_x = nn.Linear(self.feature_size,self.feature_size)
@@ -31,6 +33,9 @@ class Deformer(nn.Module):
         nn.init.xavier_uniform_(self.W_n_1.weight)
         nn.init.xavier_uniform_(self.W_2.weight)
         nn.init.xavier_uniform_(self.W_n_2.weight)
+        nn.init.xavier_uniform_(self.W_3.weight)
+        nn.init.xavier_uniform_(self.W_n_3.weight)
+        
         #nn.init.xavier_uniform_(self.W_s.weight)
         #nn.init.xavier_uniform_(self.W_x.weight)
         nn.init.xavier_uniform_(self.W_p_1.weight)
@@ -48,10 +53,10 @@ class Deformer(nn.Module):
         feature_from_state = self.a(self.W_p_2(self.a(self.W_p_1(torch.cat((c_prev,s_prev),dim=1)))))
         x = torch.cat((feature_from_state,x_prev),dim=1)
         x = self.a(self.W_1(x) + torch.mm(temp_A,self.W_n_1(x)))#Graph convolution
-        x = self.a(self.W_2(x) + torch.mm(temp_A,self.W_n_2(x)))#
-        #print(x)
+        x = self.a(self.W_2(x) + torch.mm(temp_A,self.W_n_2(x)))
+        x = self.a(self.W_3(x) + torch.mm(temp_A,self.W_n_3(x)))
+
         c = self.a(self.W_c(x))
-        #print(c)
         return x, s, c
 
 class vertexAdd(nn.Module):
@@ -94,7 +99,11 @@ if __name__=="__main__":
     adder = vertexAdd()
     criterionC = chamfer_loss.ChamferLoss()
     criterionS = separation_loss.SeparationLoss()
-    optimizer = optim.Adam(deformer.parameters(), lr=lr)
+    #optimizer = optim.Adam(deformer.parameters(), lr=lr)
+    optimizer = optim.Adagrad(deformer.parameters(), lr=lr,lr_decay=5e-4)
+    c,_,_ = dataLoader.inputMesh(feature_size)
+    dataLoader.drawPolygons(dataLoader.getPixels(c),color='red',out='pred.png')
+    erw = input("dk")
     for epoch in range(0, num_epochs):
         ex_indices = [i for i in range(0, len(train_data))]
         random.shuffle(ex_indices)
@@ -113,40 +122,26 @@ if __name__=="__main__":
             loss = 0.0
             closs = 0.0
             sloss = 0.0
+            x, s, c = deformer.forward(x,s,c,A)
             for block in range(num_blocks):
                 x, c, A = adder.forward(x,c,A)
                 s = torch.cat((s,s),dim=0)
                 x, s, c = deformer.forward(x,s,c,A)
-                closs += criterionC(c,gt)
-                sw = 10
-                if(epoch < 100):
-                    sloss += criterionS(c,gt,A)
-                    loss = closs + sw*sloss
-                else:
-                    loss = closs
-                #w = input("Block over")
+            closs += criterionC(c,gt)
+            sw = 2
+            if(epoch < 0):
+                sloss += criterionS(c,gt,A)
+                loss = closs + sw*sloss
+            else:
+                loss = closs
+            #w = input("Block over")
             total_closs +=closs/len(train_data)
             total_sloss +=sloss/len(train_data)
             total_loss += loss/len(train_data)
             loss.backward()#retain_graph=True)
             optimizer.step()
             #print(dataLoader.getPixels(c))
-            dataLoader.drawPolygons(dataLoader.getPixels(c),color='red',out='pred.png')
+            dataLoader.drawPolygons(dataLoader.getPixels(c),color='red',out='pred.png',A=A)
             dataLoader.drawPolygons(dataLoader.getPixels(gt),color='green',out='gt.png')
             #w = input("Epoch over")
         print("Loss on epoch %i: %f,%f,%f" % (epoch, total_loss,total_closs,total_sloss))
-
-    # # Evaluate on the train set
-    # train_correct = 0
-    # for idx in range(0, len(train_xs)):
-    #     # Note that we only feed in the x, not the y, since we're not training. We're also extracting different
-    #     # quantities from the running of the computation graph, namely the probabilities, prediction, and z
-    #     x = form_input(train_xs[idx])
-    #     y = train_ys[idx]
-    #     probs = ffnn.forward(x)
-    #     prediction = torch.argmax(probs)
-    #     if y == prediction:
-    #         train_correct += 1
-    #     print("Example " + repr(train_xs[idx]) + "; gold = " + repr(train_ys[idx]) + "; pred = " +\
-    #           repr(prediction) + " with probs " + repr(probs))
-    # print(repr(train_correct) + "/" + repr(len(train_ys)) + " correct after training")
