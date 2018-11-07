@@ -133,6 +133,9 @@ if __name__=="__main__":
             x = torch.Tensor(x).type(dtype)
             c = torch.Tensor(c).type(dtype)
             gt = torch.Tensor(dataLoader.generateGT(train_data[idx])).type(dtype)#vertices x dim_size
+            gtnormals = dataLoader.generateNormals()
+            
+            w = input("k")
             gt.requires_grad = False
             optimizer.zero_grad()
             loss = 0.0

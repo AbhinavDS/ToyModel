@@ -54,16 +54,23 @@ def clip(x, min, max):
 	else :             return x
 
 def distance(a,b):
-	return np.sqrt((a[0] - b[0])**2 + (a[1] - b[1])**2)
-def drawPolygons(polygons,color='red',out='out.png'):
+	return np.math.sqrt((a[0] - b[0])**2 + (a[1] - b[1])**2)
+def drawPolygons(polygons,color='red',out='out.png',normals = None):
 	black = (0,0,0)
 	white=(255,255,255)
 	im = Image.new('RGB', (600, 600), white)
 	imPxAccess = im.load()
 	draw = ImageDraw.Draw(im,'RGBA')
-	for verts in polygons:
-		# either use .polygon(), if you want to fill the area with a solid colour
+	for i in range(len(polygons)):
+		verts = polygons[i]
 		points = tuple(verts)
+		if normals is None:
+			pass
+		else:
+			polygonnormals = normals[i]
+			for point,normal in zip(points,polygonnormals):
+				draw.ellipse((point[0]+10*normal[0] - 4, point[1]+10*normal[1] - 4, point[0]+10*normal[0]  + 4, point[1]+10*normal[1] + 4), fill='blue')
+		# either use .polygon(), if you want to fill the area with a solid colour
 		#draw.point((points),fill=(255,0,0,0))
 		for point in points:
 		    draw.ellipse((point[0] - 4, point[1] - 4, point[0]  + 4, point[1] + 4), fill=color)
@@ -72,7 +79,6 @@ def drawPolygons(polygons,color='red',out='out.png'):
 		# # or .line() if you want to control the line thickness, or use both methods together!
 		tupVerts = (points)
 		#draw.line(tupVerts+(tupVerts[0]), width=2, fill=black )
-
 	im.save(out)
 DATA_SIZE = 1
 PAD_TOKEN = ', -1,-1,'
@@ -82,13 +88,51 @@ def writePolygons(file,polygons):
 		for v in range(len(polygon)):
 			vert = polygon[v]
 			if(v == 0):
-				f.write(str(vert[0])+','+str(vert[1]))
+				file.write(str(vert[0])+','+str(vert[1]))
 			else:
-				f.write(','+str(vert[0])+','+str(vert[1]))
+				file.write(','+str(vert[0])+','+str(vert[1]))
 		if(p!=len(polygons)-1):
-			f.write(PAD_TOKEN)
-	f.write('\n')
-f = open('polygons.dat','a')
+			file.write(PAD_TOKEN)
+	file.write('\n')
+def normalise(v):
+	normal2 = v
+	return [normal2[0]/math.sqrt(normal2[1]**2+normal2[0]**2), normal2[1]/math.sqrt(normal2[1]**2+normal2[0]**2)]
+def writeNormals(file,polygons):
+	allnormals = []
+	for p in range(len(polygons)):
+		polygon  = polygons[p]
+		polygonnormals = []
+		for v in range(len(polygon)):
+			vertp = polygon[v-1]
+			vert = polygon[v]
+			vertn = polygon[(v+1)%len(polygon)]
+			# vertp = [317,322]
+			# vert = [327,310]
+			# vertn = [329,302]
+			normal1 = [vert[1]-vertp[1],vertp[0]-vert[0]]
+			normal1 = normalise(normal1)
+
+			normal2 = [vertn[1]-vert[1],vert[0]-vertn[0]]
+			normal2 = normalise(normal2)
+			normal = [0,0]
+			normal[0] = normal1[0] + normal2[0]
+			normal[1] = normal1[1] + normal2[1]
+			normal = normalise(normal)
+			# print(vertp,vert,vertn,normal1,normal2,normal)
+			# w = input("eui")
+			if(v == 0):
+				file.write(str(normal[0])+','+str(normal[1]))
+			else:
+				file.write(','+str(normal[0])+','+str(normal[1]))
+			polygonnormals.append(normal)
+		allnormals.append(polygonnormals)
+		if(p!=len(polygons)-1):
+			file.write(PAD_TOKEN)			
+	file.write('\n')
+	return allnormals
+
+f = open('polygons.dat','w')
+fn = open('normals.dat','w')
 for i in range(DATA_SIZE):
 	num_polygons = int(np.ceil(abs(3*np.random.randn())))
 	num_polygons = 1
@@ -117,5 +161,6 @@ for i in range(DATA_SIZE):
 		verts = generatePolygon(ctrX=centers[p][0], ctrY=centers[p][1], aveRadius=radii[p], irregularity=0.35, spikeyness=0.2, numVerts=num_verts)
 		polygons.append(verts)
 	writePolygons(f,polygons)
-	drawPolygons(polygons)
+	allnormals = writeNormals(fn,polygons)
+	drawPolygons(polygons)#,normals = allnormals)
 	#w = input("we")

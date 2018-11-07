@@ -15,6 +15,38 @@ def generateGT(feature):
 	feature = feature[feature != -1]
 	feature = np.reshape(feature,(int(len(feature)/2),DIM))
 	return feature
+def generateNormals():
+	max_length = 0
+	with open('normals.dat') as f:
+		lines=f.readlines()
+		for line in lines:
+			data_line = np.fromstring(line, dtype=float, sep=',')
+			max_length = max(max_length,len(data_line))
+		f.close()
+	data = np.array([])
+	max_length = max_length
+	with open('normals.dat') as f:
+		lines=f.readlines()
+		for line in lines:
+			data_line = np.fromstring(line, dtype=float, sep=',')
+			data_line = np.expand_dims(np.pad(data_line,(0,max_length-len(data_line)),'constant',constant_values=(0,PAD_TOKEN)),0)
+			if(len(data)==0):
+				data = data_line
+			else:
+				data = np.concatenate((data,data_line),axis=0)
+		f.close()
+	allnormals = np.array([])
+	for data_line in data:
+		feature = data_line
+		feature = feature[feature != -1]
+		feature = np.reshape(feature,(int(len(feature)/2),DIM))
+		if(len(allnormals)==0):
+				allnormals = feature
+		else:
+			allnormals = np.concatenate((allnormals,feature),axis=0)
+
+	return allnormals
+
 def getData():
 	max_length = 0
 	with open('polygons.dat') as f:
@@ -73,6 +105,7 @@ def drawPolygons(polygons,polygonsgt,color='red',out='out.png',A=None):
 			for j in range(len(verts)):
 				#print(A)
 				if(A[i,j]):
+					
 					draw.line((tuple(verts[i]),tuple(verts[j])), width=2, fill=black )
 	color = 'green'					
 	verts = vertsgt
