@@ -24,7 +24,7 @@ def getData():
 			max_length = max(max_length,len(data_line))
 		f.close()
 	data = np.array([])
-	max_length = 2*max_length
+	max_length = max_length
 	with open('polygons.dat') as f:
 		lines=f.readlines()
 		for line in lines:
@@ -52,13 +52,14 @@ def inputMesh(feature_size):
 	return np.concatenate((c1,c2,c3),axis=0), np.concatenate((f1,f2,f3),axis=0),A
 def getPixels(c):
 	return (c*VAR + MEAN).tolist()
-def drawPolygons(polygons,color='red',out='out.png',A=None):
+def drawPolygons(polygons,polygonsgt,color='red',out='out.png',A=None):
 	black = (0,0,0)
 	white=(255,255,255)
 	im = Image.new('RGB', (600, 600), white)
 	imPxAccess = im.load()
 	draw = ImageDraw.Draw(im,'RGBA')
 	verts = polygons
+	vertsgt = polygonsgt
 	# either use .polygon(), if you want to fill the area with a solid colour
 	points = tuple(tuple(x) for x in verts)
 	#draw.point((points),fill=(255,0,0,0))
@@ -70,7 +71,14 @@ def drawPolygons(polygons,color='red',out='out.png',A=None):
 	# # or .line() if you want to control the line thickness, or use both methods together!
 		for i in range(len(verts)):
 			for j in range(len(verts)):
+				#print(A)
 				if(A[i,j]):
 					draw.line((tuple(verts[i]),tuple(verts[j])), width=2, fill=black )
-
+	color = 'green'					
+	verts = vertsgt
+	points = tuple(tuple(x) for x in verts)
+	#draw.point((points),fill=(255,0,0,0))
+	for point in points:
+	    draw.ellipse((point[0] - 4, point[1] - 4, point[0]  + 4, point[1] + 4), fill=color)
+	draw.polygon((points), outline='green',fill=(0,0,0,0) )
 	im.save(out)

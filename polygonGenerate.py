@@ -113,7 +113,7 @@ for i in range(DATA_SIZE):
 			if(not overlap):
 				centers.append([c_x,c_y])
 				radii.append(radius)
-		num_verts = int(np.ceil(abs(10*np.random.randn())))+2
+		num_verts = 3*(2**np.random.randint(0,4))#int(np.ceil(abs(10*np.random.randn())))+2
 		verts = generatePolygon(ctrX=centers[p][0], ctrY=centers[p][1], aveRadius=radii[p], irregularity=0.35, spikeyness=0.2, numVerts=num_verts)
 		polygons.append(verts)
 	writePolygons(f,polygons)
