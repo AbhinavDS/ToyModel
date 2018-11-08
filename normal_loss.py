@@ -8,14 +8,41 @@ class NormalLoss(nn.Module):
 		super(NormalLoss, self).__init__()
 		self.use_cuda = torch.cuda.is_available()        
 
-	def forward(self,preds,gts):
+	def forward(self, preds, gts, gts_normals, A):
+		temp_A = Variable(torch.Tensor(A).type(torch.FloatTensor),requires_grad=False)
+		
+		# Get normals of nearest gt vertex
 		P = self.batch_pairwise_dist(gts, preds)
-		mins, _ = torch.min(P, 1)
-		loss_1 = torch.sum(mins)
-		mins, _ = torch.min(P, 2)
-		loss_2 = torch.sum(mins)
+		nearest_gt = torch.argmin(P, 1)
+		q = gts_normals[nearest_gt][0]
 
-		return loss_1 + loss_2
+		# Calculate difference for each pred vertex, use adj mat to filter out non-neighbours
+		diff_neighbours = self.normal_pred(preds, temp_A)
+		
+		# Calculate final loss
+		return self.calculate_loss(diff_neighbours, q)
+
+	def normal_pred(self, x, A):
+		num_points_x, points_dim = x.size()
+		x = x.permute(1,0)
+		x = x.repeat(1,num_points_x).view(points_dim, num_points_x, num_points_x)
+		x_t = x.transpose(1,2)
+		x_diff = x_t - x
+		
+		# Filter out non-neighbours		
+		A = A.unsqueeze(0)
+		A = A.repeat(points_dim,1,1)
+		x_diff = torch.mul(x_diff, A)
+		return x_diff
+
+	def calculate_loss(self, p_k, nq):
+		points_dim, num_points_x, _ = p_k.size()
+		nq = nq.transpose(1,0)
+		nq = nq.repeat(1,num_points_x).view(points_dim, num_points_x, num_points_x)
+		inner_product = torch.mul(nq,p_k)
+		inner_product = torch.sum(inner_product, dim=0)
+		inner_product_sq = torch.mul(inner_product,inner_product)
+		return torch.sum(inner_product_sq)
 
 
 	def batch_pairwise_dist(self,x,y):

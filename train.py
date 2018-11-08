@@ -4,7 +4,7 @@ from torch import optim
 import numpy as np
 import random
 import dataLoader
-import chamfer_loss,separation_loss
+import chamfer_loss, separation_loss, normal_loss
 from torch.autograd import Variable
 if torch.cuda.is_available():
     dtype = torch.cuda.FloatTensor
@@ -112,9 +112,14 @@ if __name__=="__main__":
     depth = 3
 
     # RUN TRAINING AND TEST
-    deformer = Deformer(feature_size,dim_size,depth).cuda()
+    if torch.cuda.is_available():
+        deformer = Deformer(feature_size,dim_size,depth).cuda()
+    else:
+        deformer = Deformer(feature_size,dim_size,depth)
+    
     adder = vertexAdd().cuda()
     criterionC = chamfer_loss.ChamferLoss()
+    criterionN = normal_loss.NormalLoss()
     criterionS = separation_loss.SeparationLoss()
     optimizer = optim.Adam(deformer.parameters(), lr=lr)
     scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=500, gamma=0.9)
@@ -133,9 +138,9 @@ if __name__=="__main__":
             x = torch.Tensor(x).type(dtype)
             c = torch.Tensor(c).type(dtype)
             gt = torch.Tensor(dataLoader.generateGT(train_data[idx])).type(dtype)#vertices x dim_size
-            gtnormals = dataLoader.generateNormals()
+            gtnormals = torch.Tensor(dataLoader.generateNormals()).type(dtype)
             
-            w = input("k")
+            # w = input("k")
             gt.requires_grad = False
             optimizer.zero_grad()
             loss = 0.0
@@ -148,7 +153,8 @@ if __name__=="__main__":
             x = deformer.forwardCX(c)
             #print(gt.size(),s.size(),c.size())
             x, s, c = deformer.forward(x,s,c,A)
-            loss = criterionC(c,gt)
+            loss = criterionC(c, gt)
+            nloss = criterionN(c, gt, gtnormals, A)
             for block in range(num_blocks):
                 #x, c, A = adder.forward(x,c,A)
                 #s = torch.cat((s,s),dim=0)
