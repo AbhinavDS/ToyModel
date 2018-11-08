@@ -4,7 +4,7 @@ from torch import optim
 import numpy as np
 import random
 import dataLoader
-import chamfer_loss, separation_loss, normal_loss, laplacian_loss
+import chamfer_loss, normal_loss, laplacian_loss, edge_loss, separation_loss
 from torch.autograd import Variable
 if torch.cuda.is_available():
     dtype = torch.cuda.FloatTensor
@@ -121,6 +121,7 @@ if __name__=="__main__":
     criterionC = chamfer_loss.ChamferLoss()
     criterionN = normal_loss.NormalLoss()
     criterionL = laplacian_loss.LaplacianLoss()
+    criterionE = edge_loss.EdgeLoss()
     criterionS = separation_loss.SeparationLoss()
     optimizer = optim.Adam(deformer.parameters(), lr=lr)
     scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=500, gamma=0.9)
@@ -158,6 +159,7 @@ if __name__=="__main__":
             c = c1
             loss = criterionC(c, gt)
             nloss = criterionN(c, gt, gtnormals, A)
+            eloss = criterionE(c, A)
             
             for block in range(num_blocks):
                 #x, c, A = adder.forward(x,c,A)
