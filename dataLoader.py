@@ -56,7 +56,7 @@ def getData():
 			max_length = max(max_length,len(data_line))
 		f.close()
 	data = np.array([])
-	max_length = max_length
+	max_length = 1*max_length
 	with open('polygons.dat') as f:
 		lines=f.readlines()
 		for line in lines:

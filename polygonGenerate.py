@@ -80,7 +80,7 @@ def drawPolygons(polygons,color='red',out='out.png',normals = None):
 		tupVerts = (points)
 		#draw.line(tupVerts+(tupVerts[0]), width=2, fill=black )
 	im.save(out)
-DATA_SIZE = 1
+DATA_SIZE = 100
 PAD_TOKEN = ', -1,-1,'
 def writePolygons(file,polygons):
 	for p in range(len(polygons)):
