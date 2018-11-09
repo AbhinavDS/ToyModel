@@ -131,8 +131,8 @@ def writeNormals(file,polygons):
 	file.write('\n')
 	return allnormals
 
-f = open('polygons.dat','w')
-fn = open('normals.dat','w')
+f = open('polygons_train.dat','w')
+fn = open('normals_train.dat','w')
 for i in range(DATA_SIZE):
 	num_polygons = int(np.ceil(abs(3*np.random.randn())))
 	num_polygons = 1
@@ -164,3 +164,42 @@ for i in range(DATA_SIZE):
 	allnormals = writeNormals(fn,polygons)
 	drawPolygons(polygons)#,normals = allnormals)
 	#w = input("we")
+f.close()
+fn.close()
+
+DATA_SIZE = int(DATA_SIZE/5)
+f = open('polygons_test.dat','w')
+fn = open('normals_test.dat','w')
+for i in range(DATA_SIZE):
+	num_polygons = int(np.ceil(abs(3*np.random.randn())))
+	num_polygons = 1
+	aveRadius = abs(50*np.random.randn())
+	centers = []
+	radii = []
+	polygons = []
+	for p in range(num_polygons):
+		radius = 40 + 10*np.random.rand()
+		overlap = True
+		while(overlap):
+			c_x = 2*radius + (500-3*radius)*np.random.rand()
+			c_y = 2*radius + (500-3*radius)*np.random.rand()
+			found = False
+			for i in range(len(centers)):
+				if(distance(centers[i],[c_x,c_y])>(radii[i]+radius)*1.5):
+					continue
+				else:
+					found = True
+					break
+			overlap = found
+			if(not overlap):
+				centers.append([c_x,c_y])
+				radii.append(radius)
+		num_verts = 3*(2**np.random.randint(0,4))#int(np.ceil(abs(10*np.random.randn())))+2
+		verts = generatePolygon(ctrX=centers[p][0], ctrY=centers[p][1], aveRadius=radii[p], irregularity=0.35, spikeyness=0.2, numVerts=num_verts)
+		polygons.append(verts)
+	writePolygons(f,polygons)
+	allnormals = writeNormals(fn,polygons)
+	drawPolygons(polygons)#,normals = allnormals)
+	#w = input("we")
+f.close()
+fn.close()

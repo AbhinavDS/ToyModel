@@ -12,12 +12,16 @@ else:
 def generateGT(feature):
 	#input:feature_size
 	#output:V_g x dim_size
-	feature = feature[feature != -1]
+	feature = feature[feature != PAD_TOKEN]
 	feature = np.reshape(feature,(int(len(feature)/2),DIM))
 	return feature
-def generateNormals():
+def generateNormals(test=False):
+	if test:
+		file = 'normals_test.dat'
+	else:
+		file = 'normals_train.dat'
 	max_length = 0
-	with open('normals.dat') as f:
+	with open(file) as f:
 		lines=f.readlines()
 		for line in lines:
 			data_line = np.fromstring(line, dtype=float, sep=',')
@@ -25,20 +29,19 @@ def generateNormals():
 		f.close()
 	data = np.array([])
 	max_length = max_length
-	with open('normals.dat') as f:
+	with open(file) as f:
 		lines=f.readlines()
 		for line in lines:
 			data_line = np.fromstring(line, dtype=float, sep=',')
-			data_line = np.expand_dims(np.pad(data_line,(0,max_length-len(data_line)),'constant',constant_values=(0,PAD_TOKEN)),0)
+			data_line = np.expand_dims(np.pad(data_line,(0,max_length-len(data_line)),'constant',constant_values=(0,10*PAD_TOKEN)),0)
 			if(len(data)==0):
 				data = data_line
 			else:
 				data = np.concatenate((data,data_line),axis=0)
 		f.close()
 	allnormals = np.array([])
-	for data_line in data:
-		feature = data_line
-		feature = feature[feature != -1]
+	for feature in data:
+		feature = feature[feature != 10*PAD_TOKEN]
 		feature = np.reshape(feature,(int(len(feature)/2),DIM))
 		if(len(allnormals)==0):
 				allnormals = feature
@@ -47,9 +50,13 @@ def generateNormals():
 
 	return allnormals
 
-def getData():
+def getData(test=False):
+	if test:
+		file = 'polygons_test.dat'
+	else:
+		file = 'polygons_train.dat'
 	max_length = 0
-	with open('polygons.dat') as f:
+	with open(file) as f:
 		lines=f.readlines()
 		for line in lines:
 			data_line = np.fromstring(line, dtype=float, sep=',')
@@ -57,7 +64,7 @@ def getData():
 		f.close()
 	data = np.array([])
 	max_length = 10*max_length
-	with open('polygons.dat') as f:
+	with open(file) as f:
 		lines=f.readlines()
 		for line in lines:
 			data_line = np.fromstring(line, dtype=float, sep=',')

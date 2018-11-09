@@ -106,8 +106,8 @@ if __name__=="__main__":
     # MAKE THE DATA
     train_data, feature_size, dim_size = dataLoader.getData()
     batch_size = 1
-    num_epochs = 10000
-    lr = 5e-5
+    num_epochs = 2000
+    lr = 1e-5
     num_blocks = 0
     depth = 3#increasing depth needs reduction in lr
 
@@ -188,7 +188,7 @@ if __name__=="__main__":
         dataLoader.drawPolygons(dataLoader.getPixels(c),dataLoader.getPixels(gt),color='red',out='pred.png',A=A)
             #w = input("Epoch over")
         print("Loss on epoch %i: LR = %f;Losses = T:%f,C:%f,L:%f,N:%f,E:%f,S:%f" % (epoch,optimizer.param_groups[0]['lr'], total_loss,total_closs,total_laploss,total_nloss,total_eloss,total_sloss))
-
+torch.save(deformer.state_dict(),'model')
     #Normal loss
     #Blocks
     #Vertex adder in block
