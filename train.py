@@ -4,7 +4,7 @@ from torch import optim
 import numpy as np
 import random
 import dataLoader
-import chamfer_loss,separation_loss
+import chamfer_loss, normal_loss, laplacian_loss, edge_loss, separation_loss
 from torch.autograd import Variable
 if torch.cuda.is_available():
     dtype = torch.cuda.FloatTensor
@@ -112,9 +112,16 @@ if __name__=="__main__":
     depth = 10#increasing depth needs reduction in lr
 
     # RUN TRAINING AND TEST
-    deformer = Deformer(feature_size,dim_size,depth).cuda()
+    if torch.cuda.is_available():
+        deformer = Deformer(feature_size,dim_size,depth).cuda()
+    else:
+        deformer = Deformer(feature_size,dim_size,depth)
+
     adder = vertexAdd().cuda()
     criterionC = chamfer_loss.ChamferLoss()
+    criterionN = normal_loss.NormalLoss()
+    criterionL = laplacian_loss.LaplacianLoss()
+    criterionE = edge_loss.EdgeLoss()
     criterionS = separation_loss.SeparationLoss()
     optimizer = optim.Adam(deformer.parameters(), lr=lr)
     scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=100, gamma=0.3)
@@ -134,7 +141,13 @@ if __name__=="__main__":
             x = torch.Tensor(x).type(dtype)
             c = torch.Tensor(c).type(dtype)
             gt = torch.Tensor(dataLoader.generateGT(train_data[idx])).type(dtype)#vertices x dim_size
+<<<<<<< HEAD
             #gtnormals = dataLoader.generateNormals()
+=======
+            gtnormals = torch.Tensor(dataLoader.generateNormals()).type(dtype)
+            
+            # w = input("k")
+>>>>>>> c69cb70ea673996187acfca1bd5cc442b525309b
             gt.requires_grad = False
             loss = 0.0
             closs = 0.0
@@ -146,8 +159,19 @@ if __name__=="__main__":
                 s = torch.cat((s,s),dim=0)
 
             x = deformer.forwardCX(c)
+<<<<<<< HEAD
             x, s, c = deformer.forward(x,s,c,A)
             loss = criterionC(c,gt)
+=======
+            #print(gt.size(),s.size(),c.size())
+            x, s, c1 = deformer.forward(x,s,c,A)
+            laploss = criterionL(c, c1, A)
+            c = c1
+            loss = criterionC(c, gt)
+            nloss = criterionN(c, gt, gtnormals, A)
+            eloss = criterionE(c, A)
+            
+>>>>>>> c69cb70ea673996187acfca1bd5cc442b525309b
             for block in range(num_blocks):
                 #x, c, A = adder.forward(x,c,A)
                 #s = torch.cat((s,s),dim=0)
