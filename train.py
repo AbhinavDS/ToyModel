@@ -109,7 +109,7 @@ if __name__=="__main__":
     num_epochs = 10000
     lr = 5e-5
     num_blocks = 0
-    depth = 10#increasing depth needs reduction in lr
+    depth = 3#increasing depth needs reduction in lr
 
     # RUN TRAINING AND TEST
     if torch.cuda.is_available():
@@ -124,7 +124,7 @@ if __name__=="__main__":
     criterionE = edge_loss.EdgeLoss()
     criterionS = separation_loss.SeparationLoss()
     optimizer = optim.Adam(deformer.parameters(), lr=lr)
-    scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=100, gamma=0.3)
+    scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=500, gamma=0.8)
     #optimizer = optim.Adagrad(deformer.parameters(), lr=lr,lr_decay=5e-3)
     c,_,_ = dataLoader.inputMesh(feature_size)
     for epoch in range(0, num_epochs):
@@ -133,6 +133,9 @@ if __name__=="__main__":
         #random.shuffle(ex_indices)
         total_loss = 0.0
         total_closs = 0
+        total_laploss = 0
+        total_nloss = 0
+        total_eloss = 0
         total_sloss = 0
         for idx in ex_indices:
             optimizer.zero_grad()
@@ -141,37 +144,28 @@ if __name__=="__main__":
             x = torch.Tensor(x).type(dtype)
             c = torch.Tensor(c).type(dtype)
             gt = torch.Tensor(dataLoader.generateGT(train_data[idx])).type(dtype)#vertices x dim_size
-<<<<<<< HEAD
-            #gtnormals = dataLoader.generateNormals()
-=======
             gtnormals = torch.Tensor(dataLoader.generateNormals()).type(dtype)
-            
-            # w = input("k")
->>>>>>> c69cb70ea673996187acfca1bd5cc442b525309b
+
             gt.requires_grad = False
             loss = 0.0
             closs = 0.0
             sloss = 0.0
             
-            num_ias = int(np.log2(feature_size/3)) 
+            num_ias = int(np.log2(feature_size/30)) 
             for ias in range(num_ias):
                 x, c, A = adder.forward(x,c,A)
                 s = torch.cat((s,s),dim=0)
 
             x = deformer.forwardCX(c)
-<<<<<<< HEAD
-            x, s, c = deformer.forward(x,s,c,A)
-            loss = criterionC(c,gt)
-=======
-            #print(gt.size(),s.size(),c.size())
+
             x, s, c1 = deformer.forward(x,s,c,A)
             laploss = criterionL(c, c1, A)
             c = c1
-            loss = criterionC(c, gt)
+            closs = criterionC(c, gt)
             nloss = criterionN(c, gt, gtnormals, A)
             eloss = criterionE(c, A)
             
->>>>>>> c69cb70ea673996187acfca1bd5cc442b525309b
+
             for block in range(num_blocks):
                 #x, c, A = adder.forward(x,c,A)
                 #s = torch.cat((s,s),dim=0)
@@ -180,11 +174,12 @@ if __name__=="__main__":
                 closs += criterionC(c,gt)
                 if(epoch > 10000):
                     sloss += criterionS(c,gt,A)
-                    loss = closs + 1*sloss
-                else:
-                    loss = closs
-            
+
+            loss = closs + 0.0001*nloss + 0.6*(laploss + 0.33*eloss) #+ sloss
             total_closs +=closs/len(train_data)
+            total_laploss +=laploss/len(train_data)
+            total_nloss +=nloss/len(train_data)
+            total_eloss +=eloss/len(train_data)
             total_sloss +=sloss/len(train_data)
             total_loss += loss/len(train_data)
             loss.backward()#retain_graph=True)
@@ -192,7 +187,7 @@ if __name__=="__main__":
             #print(dataLoader.getPixels(c))
         dataLoader.drawPolygons(dataLoader.getPixels(c),dataLoader.getPixels(gt),color='red',out='pred.png',A=A)
             #w = input("Epoch over")
-        print("Loss on epoch %i: LR = %f;%f,%f,%f" % (epoch,optimizer.param_groups[0]['lr'], total_loss,total_closs,total_sloss))
+        print("Loss on epoch %i: LR = %f;Losses = T:%f,C:%f,L:%f,N:%f,E:%f,S:%f" % (epoch,optimizer.param_groups[0]['lr'], total_loss,total_closs,total_laploss,total_nloss,total_eloss,total_sloss))
 
     #Normal loss
     #Blocks

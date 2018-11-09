@@ -2,6 +2,10 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.autograd import Variable
+if torch.cuda.is_available():
+    dtype = torch.cuda.FloatTensor
+else:
+    dtype = torch.FloatTensor
 class EdgeLoss(nn.Module):
 
 	def __init__(self):
@@ -9,7 +13,7 @@ class EdgeLoss(nn.Module):
 		self.use_cuda = torch.cuda.is_available()        
 
 	def forward(self, pred, A):
-		temp_A = Variable(torch.Tensor(A).type(torch.FloatTensor),requires_grad=False)
+		temp_A = Variable(torch.Tensor(A).type(dtype),requires_grad=False)
 		
 		# Might not make sense in 2D
 		edges = self.normal_pred(pred, temp_A)
