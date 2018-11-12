@@ -188,7 +188,7 @@ if __name__=="__main__":
         dataLoader.drawPolygons(dataLoader.getPixels(c),dataLoader.getPixels(gt),color='red',out='pred.png',A=A)
             #w = input("Epoch over")
         print("Loss on epoch %i: LR = %f;Losses = T:%f,C:%f,L:%f,N:%f,E:%f,S:%f" % (epoch,optimizer.param_groups[0]['lr'], total_loss,total_closs,total_laploss,total_nloss,total_eloss,total_sloss))
-torch.save(deformer.state_dict(),'model')
+torch.save(deformer.state_dict(),'model.toy')
     #Normal loss
     #Blocks
     #Vertex adder in block

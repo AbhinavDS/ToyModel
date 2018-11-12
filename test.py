@@ -116,7 +116,7 @@ if __name__=="__main__":
         deformer = Deformer(feature_size,dim_size,depth).cuda()
     else:
         deformer = Deformer(feature_size,dim_size,depth)
-    deformer.load_state_dict(torch.load('model'))
+    deformer.load_state_dict(torch.load('model.toy'))
     adder = vertexAdd().cuda()
     criterionC = chamfer_loss.ChamferLoss()
     criterionN = normal_loss.NormalLoss()
@@ -174,7 +174,7 @@ if __name__=="__main__":
         total_sloss +=sloss/len(test_data)
         total_loss += loss/len(test_data)
         #print(dataLoader.getPixels(c))
-    dataLoader.drawPolygons(dataLoader.getPixels(c),dataLoader.getPixels(gt),color='red',out='pred.png',A=A)
+    dataLoader.drawPolygons(dataLoader.getPixels(c),dataLoader.getPixels(gt),color='red',out='pred_test.png',A=A)
         #w = input("Epoch over")
     print("Losses = T:%f,C:%f,L:%f,N:%f,E:%f,S:%f" % (total_loss,total_closs,total_laploss,total_nloss,total_eloss,total_sloss))
     #Blocks
