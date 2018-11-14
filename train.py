@@ -105,11 +105,12 @@ class vertexAdd(nn.Module):
 if __name__=="__main__":
     # MAKE THE DATA
     train_data, feature_size, dim_size = dataLoader.getData()
+    print ("Loaded")
     batch_size = 1
     num_epochs = 2000
-    lr = 1e-5
+    lr = 1e-5*0.8*0.8
     num_blocks = 0
-    depth = 3#increasing depth needs reduction in lr
+    depth = 10#increasing depth needs reduction in lr
 
     # RUN TRAINING AND TEST
     if torch.cuda.is_available():
@@ -117,6 +118,8 @@ if __name__=="__main__":
     else:
         deformer = Deformer(feature_size,dim_size,depth)
 
+    deformer.load_state_dict(torch.load('model_10000.toy'))
+    
     adder = vertexAdd().cuda()
     criterionC = chamfer_loss.ChamferLoss()
     criterionN = normal_loss.NormalLoss()
@@ -124,9 +127,11 @@ if __name__=="__main__":
     criterionE = edge_loss.EdgeLoss()
     criterionS = separation_loss.SeparationLoss()
     optimizer = optim.Adam(deformer.parameters(), lr=lr)
-    scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=500, gamma=0.8)
+    scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=100, gamma=0.8)
     #optimizer = optim.Adagrad(deformer.parameters(), lr=lr,lr_decay=5e-3)
     c,_,_ = dataLoader.inputMesh(feature_size)
+    k = 0
+    show_stat = 100
     for epoch in range(0, num_epochs):
         scheduler.step()
         ex_indices = [i for i in range(0, len(train_data))]
@@ -174,7 +179,7 @@ if __name__=="__main__":
                 closs += criterionC(c,gt)
                 if(epoch > 10000):
                     sloss += criterionS(c,gt,A)
-
+            
             loss = closs + 0.0001*nloss + 0.6*(laploss + 0.33*eloss) #+ sloss
             total_closs +=closs/len(train_data)
             total_laploss +=laploss/len(train_data)
@@ -182,13 +187,23 @@ if __name__=="__main__":
             total_eloss +=eloss/len(train_data)
             total_sloss +=sloss/len(train_data)
             total_loss += loss/len(train_data)
-            loss.backward()#retain_graph=True)
-            optimizer.step()
-            #print(dataLoader.getPixels(c))
-        dataLoader.drawPolygons(dataLoader.getPixels(c),dataLoader.getPixels(gt),color='red',out='pred.png',A=A)
-            #w = input("Epoch over")
-        print("Loss on epoch %i: LR = %f;Losses = T:%f,C:%f,L:%f,N:%f,E:%f,S:%f" % (epoch,optimizer.param_groups[0]['lr'], total_loss,total_closs,total_laploss,total_nloss,total_eloss,total_sloss))
-torch.save(deformer.state_dict(),'model.toy')
+                
+            if (k % show_stat == 0):
+                dataLoader.drawPolygons(dataLoader.getPixels(c),dataLoader.getPixels(gt),color='red',out='pred.png',A=A)
+                #w = input("Epoch over")
+                print("Loss on epoch %i, iteration %i: LR = %f;Losses = T:%f,C:%f,L:%f,N:%f,E:%f,S:%f" % (epoch, k, optimizer.param_groups[0]['lr'], total_loss,total_closs,total_laploss,total_nloss,total_eloss,total_sloss))
+                torch.save(deformer.state_dict(),'model_10000.toy')
+            else:
+                loss.backward()#retain_graph=True)
+                optimizer.step()
+                #print(dataLoader.getPixels(c))
+                
+            k += 1
+
     #Normal loss
     #Blocks
     #Vertex adder in block
+
+
+# Add batch sizes
+# Maybe check for examples from same number of vertices. 
