@@ -109,14 +109,14 @@ if __name__=="__main__":
     num_epochs = 1
     lr = 5e-5
     num_blocks = 0
-    depth = 3#increasing depth needs reduction in lr
+    depth = 10#increasing depth needs reduction in lr
 
     # RUN TRAINING AND TEST
     if torch.cuda.is_available():
         deformer = Deformer(feature_size,dim_size,depth).cuda()
     else:
         deformer = Deformer(feature_size,dim_size,depth)
-    deformer.load_state_dict(torch.load('model.toy'))
+    deformer.load_state_dict(torch.load('model_10000.toy'))
     adder = vertexAdd().cuda()
     criterionC = chamfer_loss.ChamferLoss()
     criterionN = normal_loss.NormalLoss()
@@ -173,8 +173,9 @@ if __name__=="__main__":
         total_eloss +=eloss/len(test_data)
         total_sloss +=sloss/len(test_data)
         total_loss += loss/len(test_data)
+        break
         #print(dataLoader.getPixels(c))
-    dataLoader.drawPolygons(dataLoader.getPixels(c),dataLoader.getPixels(gt),color='red',out='pred.png',A=A)
+    dataLoader.drawPolygons(dataLoader.getPixels(c),dataLoader.getPixels(gt),color='red',out='pred_test.png',A=A)
         #w = input("Epoch over")
     print("Losses = T:%f,C:%f,L:%f,N:%f,E:%f,S:%f" % (total_loss,total_closs,total_laploss,total_nloss,total_eloss,total_sloss))
     #Blocks
