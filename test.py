@@ -116,7 +116,7 @@ if __name__=="__main__":
         deformer = Deformer(feature_size,dim_size,depth).cuda()
     else:
         deformer = Deformer(feature_size,dim_size,depth)
-    deformer.load_state_dict(torch.load('model'))
+    deformer.load_state_dict(torch.load('model.toy'))
     adder = vertexAdd().cuda()
     criterionC = chamfer_loss.ChamferLoss()
     criterionN = normal_loss.NormalLoss()
