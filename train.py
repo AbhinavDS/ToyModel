@@ -144,9 +144,11 @@ if __name__=="__main__":
 	# MAKE THE DATA
 	train_data, train_data_normal, seq_len, feature_size, dim_size = dataLoader.getData()
 	print ("Loaded")
-	batch_size = 50
+	k = 0
+	show_stat = 500
+	batch_size = 100
 	num_epochs = 2000
-	lr = 1e-5
+	lr = 1e-5 * 0.4
 	num_blocks = 0
 	depth = 10#increasing depth needs reduction in lr
 
@@ -156,7 +158,7 @@ if __name__=="__main__":
 	else:
 		deformer = Deformer(feature_size,dim_size,depth)
 
-	# deformer.load_state_dict(torch.load('model_10000.toy'))
+	deformer.load_state_dict(torch.load('model_10000.toy'))
 	
 	adder = vertexAdd().cuda()
 	criterionC = chamfer_loss.ChamferLoss()
@@ -170,9 +172,7 @@ if __name__=="__main__":
 	c,_,_ = dataLoader.inputMesh(feature_size)
 
 
-	k = 0
-	show_stat = 500
-	for epoch in range(0, num_epochs):
+	for epoch in range(436, num_epochs):
 		scheduler.step()
 		ex_indices = [i for i in range(0, len(train_data))]
 		
@@ -234,7 +234,7 @@ if __name__=="__main__":
 				if(epoch > 10000):
 					sloss += criterionS(c,gt,A)
 			
-			loss = closs + 0.0001*nloss + 0.6*(laploss + 0.33*eloss) #+ sloss
+			loss = closs + 0.0001*nloss + 0.6*(laploss + 0.33*eloss)
 			total_closs +=closs/len(train_data)
 			total_laploss +=laploss/len(train_data)
 			total_nloss +=nloss/len(train_data)
@@ -248,14 +248,9 @@ if __name__=="__main__":
 				print("Loss on epoch %i, iteration %i: LR = %f;Losses = T:%f,C:%f,L:%f,N:%f,E:%f,S:%f" % (epoch, k, optimizer.param_groups[0]['lr'], total_loss,total_closs,total_laploss,total_nloss,total_eloss,total_sloss))
 				torch.save(deformer.state_dict(),'model_10000.toy')
 			else:
+				loss = loss#/batch_size
 				loss.backward()#retain_graph=True)
 				optimizer.step()
 				
 			k += batch_size
 
-	#Normal loss
-	#Blocks
-	#Vertex adder in block
-
-# Add batch sizes
-# Maybe check for examples from same number of vertices. 
