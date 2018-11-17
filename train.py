@@ -257,6 +257,5 @@ if __name__=="__main__":
 	#Blocks
 	#Vertex adder in block
 
-
 # Add batch sizes
 # Maybe check for examples from same number of vertices. 
