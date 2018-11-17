@@ -10,11 +10,13 @@ if torch.cuda.is_available():
 else:
 	dtype = torch.FloatTensor
 def generateGT(feature):
-	#input:feature_size
+	#input:feature_size (batch_size, feature_dim)
 	#output:V_g x dim_size
-	feature = feature[feature != PAD_TOKEN]
-	feature = np.reshape(feature,(int(len(feature)/2),DIM))
+	#feature = feature#[feature != PAD_TOKEN]
+	shape  = feature.shape
+	feature = np.reshape(feature,(shape[0], int(shape[1]/DIM), DIM))
 	return feature
+
 def generateNormals(test=False):
 	if test:
 		file = 'normals_test.dat'
@@ -28,7 +30,7 @@ def generateNormals(test=False):
 			max_length = max(max_length,len(data_line))
 		f.close()
 	data = np.array([])
-	max_length = max_length
+	max_length = 10*max_length
 	with open(file) as f:
 		lines=f.readlines()
 		for line in lines:
@@ -39,16 +41,7 @@ def generateNormals(test=False):
 			else:
 				data = np.concatenate((data,data_line),axis=0)
 		f.close()
-	allnormals = np.array([])
-	for feature in data:
-		feature = feature[feature != 10*PAD_TOKEN]
-		feature = np.reshape(feature,(int(len(feature)/2),DIM))
-		if(len(allnormals)==0):
-				allnormals = feature
-		else:
-			allnormals = np.concatenate((allnormals,feature),axis=0)
-
-	return allnormals
+	return data
 
 def getData(test=False):
 	if test:
@@ -63,20 +56,27 @@ def getData(test=False):
 			max_length = max(max_length,len(data_line))
 		f.close()
 	data = np.array([])
+	seq_len = np.array([])
 	max_length = 10*max_length
 	with open(file) as f:
 		lines=f.readlines()
 		for line in lines:
 			data_line = np.fromstring(line, dtype=float, sep=',')
+			cur_seq_len = int(len(data_line)/DIM)
 			data_line = np.expand_dims(np.pad(data_line,(0,max_length-len(data_line)),'constant',constant_values=(0,PAD_TOKEN)),0)
 			data_line[data_line==PAD_TOKEN] = PAD_TOKEN*VAR + MEAN
 			data_line = (data_line - MEAN)/VAR
 			if(len(data)==0):
 				data = data_line
+				seq_len = np.array([cur_seq_len])
 			else:
 				data = np.concatenate((data,data_line),axis=0)
+				seq_len = np.concatenate((seq_len, np.array([cur_seq_len])),axis=0)
 		f.close()
-	return data,max_length,DIM
+
+	data_normals = generateNormals(test=test)
+	return data, data_normals, seq_len, max_length, DIM
+
 def inputMesh(feature_size):
 	c1= np.expand_dims(np.array([0,-0.9]),0)
 	c2= np.expand_dims(np.array([-0.9,0.9]),0)

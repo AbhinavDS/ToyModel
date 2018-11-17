@@ -11,19 +11,24 @@ class ChamferLoss(nn.Module):
 		super(ChamferLoss, self).__init__()
 		self.use_cuda = torch.cuda.is_available()        
 
-	def forward(self,preds,gts):
+	def forward(self,preds, gts, mask):
 		P = self.batch_pairwise_dist(gts, preds)
-		mins, _ = torch.min(P, 1)
-		loss_1 = torch.sum(mins)
-		mins, _ = torch.min(P, 2)
-		loss_2 = torch.sum(mins)
+		repeated_mask = mask.unsqueeze(2).repeat(1,1,preds.size(1))
 
-		return loss_1 + loss_2
+		loss = 0
+		for i in range(gts.size(0)):
+			newP = P[i].masked_select(repeated_mask[i])
+			newP = newP.reshape(1,-1, preds.size(1))
+			
+			mins, _ = torch.min(newP, 1)
+			loss_1 = torch.sum(mins)
+			mins, _ = torch.min(newP, 2)
+			loss_2 = torch.sum(mins)
+			loss += (loss_1+loss_2)
+		return loss
 
 
 	def batch_pairwise_dist(self,x,y):
-		x = x.unsqueeze(0)
-		y = y.unsqueeze(0)
 		bs, num_points_x, points_dim = x.size()
 		_, num_points_y, _ = y.size()
 		xx = torch.bmm(x, x.transpose(2,1))

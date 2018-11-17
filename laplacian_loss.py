@@ -25,17 +25,18 @@ class LaplacianLoss(nn.Module):
 
 	def centroid(self, x, A):
 		# print ("A", x,)
-		num_points_x, points_dim = x.size()
-		num_neighbours = torch.sum(A, dim=0)
-		
-		neighbours = x.permute(1,0)
-		neighbours = neighbours.repeat(1,num_points_x).view(points_dim, num_points_x, num_points_x)
+		batch_size, num_points_x, points_dim = x.size()
+		num_neighbours = torch.sum(A, dim=1)
+		neighbours = x.permute(0,2,1)
+		neighbours = neighbours.repeat(1, 1, num_points_x).view(batch_size, points_dim, num_points_x, num_points_x)
 
 		# Filter out non-neighbours		
-		A = A.unsqueeze(0)
-		A = A.repeat(points_dim,1,1)
+		A = A.unsqueeze(1)
+		A = A.repeat(1, points_dim,1,1)
+
 		neighbours = torch.mul(neighbours, A)
-		neighbours = torch.sum(neighbours, dim = 2)
-		neighbours = neighbours / num_neighbours
-		neighbours = neighbours.permute(1,0)
+		neighbours = torch.sum(neighbours, dim = 3)
+		neighbours = neighbours.permute(0,2,1)
+		num_neighbours = num_neighbours.unsqueeze(2).repeat(1,1,2)
+		neighbours = torch.div(neighbours, num_neighbours)
 		return neighbours
