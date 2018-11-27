@@ -1,4 +1,5 @@
 from src.train import train_model
+from src.test import test_model
 import argparse
 
 
@@ -24,6 +25,7 @@ def parseArgs():
     parser.add_argument('--dim_size', type=int, default=2, help='See variable name')
     parser.add_argument('--img_width', type=int, default=600, help='See variable name')
     parser.add_argument('--img_height', type=int, default=600, help='See variable name')
+    parser.add_argument('-t','--test', dest='test', default = False, action='store_true',help='See variable name')
     args = parser.parse_args()
 
     return args
@@ -31,4 +33,7 @@ def parseArgs():
 if __name__=="__main__":
     args = parseArgs()
     print(args)
-    train_model(args)
+    if(args.test):
+        test_model(args)
+    else:
+        train_model(args)

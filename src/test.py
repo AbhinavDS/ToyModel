@@ -1,105 +1,119 @@
+import time
 import torch
-import torch.nn as nn
 from torch import optim
 import numpy as np
 import random
+import math
 from data import dataLoader
-from utils import utils
-from loss.chamfer_loss import ChamferLoss
-from loss.normal_loss import NormalLoss
-from loss.laplacian_loss import LaplacianLoss
-from loss.edge_loss import EdgeLoss
-from modules.deformer import Deformer
-from modules.vertex_adder import VertexAdder
+from src.util import utils
+from src.loss.chamfer_loss import ChamferLoss
+from src.loss.normal_loss import NormalLoss
+from src.loss.laplacian_loss import LaplacianLoss
+from src.loss.edge_loss import EdgeLoss
+from src.modules.deformer import Deformer
+from src.modules.vertex_adder import VertexAdder
 
-from torch.autograd import Variable
-if torch.cuda.is_available():
-    dtype = torch.cuda.FloatTensor
-    dtypeL = torch.cuda.LongTensor
-    dtypeB = torch.cuda.ByteTensor
-else:
-    dtype = torch.FloatTensor
-    dtypeL = torch.LongTensor
-    dtypeB = torch.ByteTensor
+from  src import dtype, dtypeL, dtypeB
+def test_model(params):
+	# MAKE THE DATA loader
+	max_vertices, feature_size, data_size = dataLoader.getMetaData(params)
+	dim_size = params.dim_size
+	train_data_loader = dataLoader.getDataLoader(params)
+	num_blocks = int(math.ceil(np.log2(max_vertices))) - 1 #(since we start with 3 vertices already)
+	print("Num Blocks: " + str(num_blocks))
+	
+	iter_count = 0
+	# RUN TRAINING AND TEST
+	if torch.cuda.is_available():
+		deformer = Deformer(feature_size,dim_size,params.depth).cuda()
+	else:
+		deformer = Deformer(feature_size,dim_size,params.depth)
 
-torch.set_printoptions(threshold=23679250035)
-np.set_printoptions(threshold=13756967)
+	if params.load_model_path:
+		deformer.load_state_dict(torch.load(params.load_model_path))
+	
+	adder = VertexAdder().cuda()
+	criterionC = ChamferLoss()
+	criterionN = NormalLoss()
+	criterionL = LaplacianLoss()
+	criterionE = EdgeLoss()
+	optimizer = optim.Adam(deformer.parameters(), lr=params.lr)
+	scheduler = optim.lr_scheduler.StepLR(optimizer, step_size = params.step_size, gamma=params.gamma)
+	c,_,_ = utils.inputMesh(feature_size)
 
-if __name__=="__main__":
-    # MAKE THE DATA
-    test_data, feature_size, dim_size = dataLoader.getData(test=True)
-    batch_size = 1
-    num_epochs = 1
-    lr = 5e-5
-    num_blocks = 0
-    depth = 10#increasing depth needs reduction in lr
 
-    # RUN TRAINING AND TEST
-    if torch.cuda.is_available():
-        deformer = Deformer(feature_size,dim_size,depth).cuda()
-    else:
-        deformer = Deformer(feature_size,dim_size,depth)
-    deformer.load_state_dict(torch.load('model_10000.toy'))
-    adder = vertexAdd().cuda()
-    criterionC = chamfer_loss.ChamferLoss()
-    criterionN = normal_loss.NormalLoss()
-    criterionL = laplacian_loss.LaplacianLoss()
-    criterionE = edge_loss.EdgeLoss()
-    criterionS = separation_loss.SeparationLoss()
-    c,_,_ = dataLoader.inputMesh(feature_size)
-    ex_indices = [i for i in range(0, len(test_data))]
-    total_loss = 0.0
-    total_closs = 0
-    total_laploss = 0
-    total_nloss = 0
-    total_eloss = 0
-    total_sloss = 0
-    for idx in ex_indices:
-        s = torch.Tensor(test_data[idx]).type(dtype).repeat(3,1)
-        c,x,A = dataLoader.inputMesh(feature_size)
-        x = torch.Tensor(x).type(dtype)
-        c = torch.Tensor(c).type(dtype)
-        gt = torch.Tensor(dataLoader.generateGT(test_data[idx])).type(dtype)#vertices x dim_size
-        gtnormals = torch.Tensor(dataLoader.generateNormals(test=True)).type(dtype)
+	epoch = 0
+	scheduler.step()
+	total_loss = 0.0
+	total_closs = 0
+	total_laploss = 0
+	total_nloss = 0
+	total_eloss = 0
+	total_sloss = 0
+	start_time = time.time()
+	for i in range(int(math.ceil(data_size/params.batch_size))):
+		optimizer.zero_grad()
+		train_data, train_data_normal, seq_len = next(train_data_loader)
+		# input 
+		s = torch.Tensor(train_data).type(dtype).unsqueeze(1).repeat(1,3,1)
+		c,x,A = utils.inputMesh(feature_size)# x is c with zeros appended, x=f ..pixel2mesh
+		c = np.expand_dims(c, 0)
+		c = np.tile(c,(params.batch_size, 1, 1))
+		x = np.expand_dims(x, 0)
+		x = np.tile(x,(params.batch_size, 1, 1))
+		A = np.expand_dims(A, 0)
+		A = np.tile(A,(params.batch_size, 1, 1))
+		x = torch.Tensor(x).type(dtype)
+		c = torch.Tensor(c).type(dtype)
+		gt = torch.Tensor(utils.reshapeGT(params,train_data)).type(dtype)#vertices x dim_size
+		gtnormals = torch.Tensor(utils.reshapeGT(params,train_data_normal)).type(dtype)#vertices x dim_size
 
-        gt.requires_grad = False
-        loss = 0.0
-        closs = 0.0
-        sloss = 0.0
-        
-        num_ias = int(np.log2(feature_size/30)) 
-        for ias in range(num_ias):
-            x, c, A = adder.forward(x,c,A)
-            s = torch.cat((s,s),dim=0)
+		mask = utils.create_mask(gt, seq_len)
+		mask = torch.Tensor(mask).type(dtypeB)
+		
+		gt.requires_grad = False
+		loss = 0.0
+		closs = 0.0
+		laploss = 0
+		nloss = 0
+		eloss = 0
 
-        x = deformer.forwardCX(c)
+		
+		# Vertex addition
 
-        x, s, c1 = deformer.forward(x,s,c,A)
+		x = deformer.embed(c)
+		c_prev = c
+		x, s, c = deformer.forward(x,s,c_prev,A)
+		laploss = criterionL(c_prev, c, A)
+		closs = criterionC(c, gt, mask)
+		eloss = criterionE(c, A)
+		nloss = criterionN(c, gt, gtnormals, A, mask)
+		
 
-        for block in range(num_blocks):
-            #x, c, A = adder.forward(x,c,A)
-            #s = torch.cat((s,s),dim=0)
-            c = c1
-            x, s, c1 = deformer.forward(x,s,c,A)
-            
-            #closs += criterionC(c,gt)
-        laploss = criterionL(c, c1, A)
-        c = c1
-        closs = criterionC(c, gt)
-        nloss = criterionN(c, gt, gtnormals, A)
-        eloss = criterionE(c, A)
+		for block in range(num_blocks):
+			x, c, A = adder.forward(x,c,A)
+			s = torch.cat((s,s),dim=1)
+			c_prev = c
+			x, s, c = deformer.forward(x,s,c_prev,A)
+			
+			laploss += criterionL(c_prev, c, A)
+			closs += criterionC(c, gt, mask)
+			eloss += criterionE(c, A)
+			nloss += criterionN(c, gt, gtnormals, A, mask)
+			
+		loss = closs + params.lambda_n*nloss + params.lambda_lap*laploss + params.lambda_e*eloss
+		total_closs +=closs/len(train_data)
+		total_laploss +=laploss/len(train_data)
+		total_nloss +=nloss/len(train_data)
+		total_eloss +=eloss/len(train_data)
+		total_loss += loss/len(train_data)
+			
+		masked_gt = gt[0].masked_select(mask[0].unsqueeze(1).repeat(1,dim_size)).reshape(-1, dim_size)
+		utils.drawPolygons(utils.getPixels(c[0]),utils.getPixels(masked_gt),color='red',out='results/pred_test.png',A=A[0])
+		print("Loss on epoch %i, iteration %i: LR = %f;Losses = T:%f,C:%f,L:%f,N:%f,E:%f" % (epoch, iter_count, optimizer.param_groups[0]['lr'], loss, closs, laploss, nloss, eloss))
+		input("press enter")
+		iter_count += params.batch_size
+	end_time = time.time()
+	print ("Epoch Completed, Time taken: %f"%(end_time-start_time))
+	print("Loss on epoch %i,  LR = %f;Losses = T:%f,C:%f,L:%f,N:%f,E:%f" % (epoch, optimizer.param_groups[0]['lr'], total_loss,total_closs,total_laploss,total_nloss,total_eloss))
 
-        loss = closs + 0.0001*nloss + 0.6*(laploss + 0.33*eloss) #+ sloss
-        total_closs +=closs/len(test_data)
-        total_laploss +=laploss/len(test_data)
-        total_nloss +=nloss/len(test_data)
-        total_eloss +=eloss/len(test_data)
-        total_sloss +=sloss/len(test_data)
-        total_loss += loss/len(test_data)
-        break
-        #print(dataLoader.getPixels(c))
-    dataLoader.drawPolygons(dataLoader.getPixels(c),dataLoader.getPixels(gt),color='red',out='pred_test.png',A=A)
-        #w = input("Epoch over")
-    print("Losses = T:%f,C:%f,L:%f,N:%f,E:%f,S:%f" % (total_loss,total_closs,total_laploss,total_nloss,total_eloss,total_sloss))
-    #Blocks
-    #Vertex adder in block

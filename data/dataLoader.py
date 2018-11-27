@@ -98,5 +98,5 @@ def getDataLoader(params):
 			polygons_line = f_polygons.readline()
 			normals_line = f_normals.readline()
 		
-		f_polygons_path.close()
-		f_normals_path.close()
+		f_polygons.close()
+		f_normals.close()
