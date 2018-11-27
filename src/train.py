@@ -53,7 +53,7 @@ def train_model(params):
 		start_time = time.time()
 		for i in range(int(math.ceil(data_size/params.batch_size))):
 			optimizer.zero_grad()
-			train_data, train_data_normal, seq_len = next(train_data_loader)
+			train_data, train_data_normal, seq_len, proj_data = next(train_data_loader)
 			# input 
 			s = torch.Tensor(train_data).type(dtype).unsqueeze(1).repeat(1,3,1)
 			c,x,A = utils.inputMesh(feature_size)# x is c with zeros appended, x=f ..pixel2mesh
@@ -110,7 +110,7 @@ def train_model(params):
 				
 			if (iter_count % params.show_stat == 0):
 				masked_gt = gt[0].masked_select(mask[0].unsqueeze(1).repeat(1,dim_size)).reshape(-1, dim_size)
-				utils.drawPolygons(utils.getPixels(c[0]),utils.getPixels(masked_gt),color='red',out='results/pred.png',A=A[0])
+				utils.drawPolygons(utils.getPixels(c[0]),utils.getPixels(masked_gt),proj_data=proj_data[0],color='red',out='results/pred.png',A=A[0])
 				print("Loss on epoch %i, iteration %i: LR = %f;Losses = T:%f,C:%f,L:%f,N:%f,E:%f" % (epoch, iter_count, optimizer.param_groups[0]['lr'], loss, closs, laploss, nloss, eloss))
 				torch.save(deformer.state_dict(), params.save_model_path)
 			# else:

@@ -44,16 +44,15 @@ def getDataLoader(params):
 			cur_seq_len = int(len(polygons_data_line)/params.dim_size)
 			polygons_data_line = np.expand_dims(np.pad(polygons_data_line,(0,feature_size-len(polygons_data_line)),'constant',constant_values=(0,PAD_TOKEN)),0)
 			
+			assert(params.dim_size == 2)
 			#1d projection of 2d mesh
 			proj_data_line = np.zeros(params.img_width,dtype=float)
 			p = 0
-			c = 0
 			minx = params.img_width -1 
 			maxx = 0
 			while True:
-				if c >= max_vertices:
-					break
-				if p >=2 and polygons_data_line[0,p] == PAD_TOKEN and polygons_data_line[0,p-2] == PAD_TOKEN:
+				if p <= feature_size-2 and polygons_data_line[0,p] == PAD_TOKEN and polygons_data_line[0,p+2] == PAD_TOKEN:
+					proj_data_line[minx:maxx+1] = 1.0
 					break
 				if polygons_data_line[0,p] == PAD_TOKEN:
 					p += 2
@@ -64,7 +63,6 @@ def getDataLoader(params):
 				minx = min(minx,int(polygons_data_line[0,p]))
 				maxx = max(maxx,int(polygons_data_line[0,p]))
 				p += 2
-				c += 1
 			proj_data_line = np.expand_dims(proj_data_line,axis = 0)
 
 			polygons_data_line[polygons_data_line==PAD_TOKEN] = PAD_TOKEN*VAR + MEAN

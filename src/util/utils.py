@@ -18,7 +18,7 @@ def inputMesh(feature_size):
 def getPixels(c):
 	return (c*VAR + MEAN).tolist()
 
-def drawPolygons(polygons,polygonsgt,color='red',out='out.png',A=None):
+def drawPolygons(polygons,polygonsgt, proj_data=None, color='red',out='out.png',A=None):
 	black = (0,0,0)
 	white=(255,255,255)
 	im = Image.new('RGB', (600, 600), white)
@@ -38,8 +38,7 @@ def drawPolygons(polygons,polygonsgt,color='red',out='out.png',A=None):
 		for i in range(len(verts)):
 			for j in range(len(verts)):
 				#print(A)
-				if(A[i,j]):
-					
+				if(A[i,j]):					
 					draw.line((tuple(verts[i]),tuple(verts[j])), width=2, fill=black )
 	color = 'green'					
 	verts = vertsgt
@@ -56,6 +55,10 @@ def drawPolygons(polygons,polygonsgt,color='red',out='out.png',A=None):
 		for point in points:
 		    draw.ellipse((point[0] - 4, point[1] - 4, point[0]  + 4, point[1] + 4), fill=color)
 		draw.polygon((points), outline='green',fill=(0,0,0,0) )
+	for i in range(im.size[0]):
+		for j in range(im.size[1]-10,im.size[1]):
+			imPxAccess[i,j] = (int(proj_data[i])*255,0,0)
+	#im.putdata(imPxAccess)
 	im.save(out)
 
 
