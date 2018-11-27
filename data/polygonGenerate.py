@@ -9,16 +9,17 @@ def parseArgs():
 	parser = argparse.ArgumentParser(description='polygonGenerate.py')
 	
 	# General system running and configuration options  
-	parser.add_argument('-p','--pad_token', type=str, default=', -1,-1,', help='Pad token to separate polygons in same data instance')
+	parser.add_argument('-p','--pad_token', type=str, default=',-2,-2,', help='Pad token to separate polygons in same data instance')
 	parser.add_argument('-s','--suffix', type=str, default='train', help='suffix_name')
 	parser.add_argument('-d','--data_size', type=int, default=1000, help='Data size')
 	parser.add_argument('-n','--num_polygons', type=int, default=1, help='num of polygons per instance')
 	parser.add_argument('-sig','--sigma', type=int, default=10, help='sigma')
 	parser.add_argument('-r','--gen_random_polygons', dest='random_num_polygons', default=False, action='store_true', help='generate random number of polygons')
+	parser.add_argument('-o','--no_overlap', dest='no_overlap', default=False, action='store_true', help='creates polygons with no overlap in y dimension')
 	args = parser.parse_args()
 	return args
 
-def generatePolygon( ctrX, ctrY, aveRadius, irregularity, spikeyness, numVerts ) :
+def generatePolygon( ctrX, ctrY, aveRadius, irregularity, spikeyness, numVerts) :
 	'''Start with the centre of the polygon at ctrX, ctrY, 
 		then creates the polygon by sampling points on a circle around the centre. 
 		Randon noise is added by varying the angular spacing between sequential points,
@@ -30,7 +31,7 @@ def generatePolygon( ctrX, ctrY, aveRadius, irregularity, spikeyness, numVerts )
 		irregularity - [0,1] indicating how much variance there is in the angular spacing of vertices. [0,1] will map to [0, 2pi/numberOfVerts]
 		spikeyness - [0,1] indicating how much variance there is in each vertex from the circle of radius aveRadius. [0,1] will map to [0, aveRadius]
 		numVerts - self-explanatory
-
+		no_overlap - makes sure polygons don't overlap in y dimension of 2d image (can see separately in 1d projection)
 		Returns a list of vertices, in CCW order.
 	'''
 	irregularity = clip( irregularity, 0,1 ) * 2*math.pi / numVerts
@@ -150,11 +151,18 @@ def dataGenerator(params):
 				c_y = 2*radius + (500-3*radius)*np.random.rand()
 				found = False
 				for i in range(len(centers)):
-					if(distance(centers[i],[c_x,c_y])>(radii[i]+radius)*1.5):
-						continue
-					else:
-						found = True
-						break
+					if params.no_overlap:
+						if(distance(centers[i],[c_x,centers[i][1]])>(radii[i]+radius)*1.5):
+							continue
+						else:
+							found = True
+							break
+					else:						
+						if(distance(centers[i],[c_x,c_y])>(radii[i]+radius)*1.5):
+							continue
+						else:
+							found = True
+							break
 				overlap = found
 				if(not overlap):
 					centers.append([c_x,c_y])

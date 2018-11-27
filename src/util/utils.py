@@ -44,10 +44,18 @@ def drawPolygons(polygons,polygonsgt,color='red',out='out.png',A=None):
 	color = 'green'					
 	verts = vertsgt
 	points = tuple(tuple(x) for x in verts)
-	#draw.point((points),fill=(255,0,0,0))
+	i = 0
+	polygons=[[]]
 	for point in points:
-	    draw.ellipse((point[0] - 4, point[1] - 4, point[0]  + 4, point[1] + 4), fill=color)
-	draw.polygon((points), outline='green',fill=(0,0,0,0) )
+		if point[0] >= 0 and point[1] >= 0:
+			polygons[-1].append(point)
+		else:
+			polygons.append([])
+	#draw.point((points),fill=(255,0,0,0))
+	for points in polygons:
+		for point in points:
+		    draw.ellipse((point[0] - 4, point[1] - 4, point[0]  + 4, point[1] + 4), fill=color)
+		draw.polygon((points), outline='green',fill=(0,0,0,0) )
 	im.save(out)
 
 

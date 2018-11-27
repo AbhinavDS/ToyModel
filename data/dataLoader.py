@@ -2,7 +2,7 @@ import torch
 import numpy as np
 import os
 
-PAD_TOKEN = -1
+PAD_TOKEN = -2
 MEAN = 300
 VAR = 300
 if torch.cuda.is_available():
@@ -67,5 +67,5 @@ def getDataLoader(params):
 			polygons_line = f_polygons.readline()
 			normals_line = f_normals.readline()
 		
-		f_polygons_path.close()
-		f_normals_path.close()
+		f_polygons.close()
+		f_normals.close()

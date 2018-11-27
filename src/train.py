@@ -1,3 +1,4 @@
+import time
 import torch
 from torch import optim
 import numpy as np
@@ -18,7 +19,7 @@ def train_model(params):
 	max_vertices, feature_size, data_size = dataLoader.getMetaData(params)
 	dim_size = params.dim_size
 	train_data_loader = dataLoader.getDataLoader(params)
-	num_blocks = int(math.ceil(np.log2(max_vertices)))
+	num_blocks = int(math.ceil(np.log2(max_vertices))) - 1 #(since we start with 3 vertices already)
 	print("Num Blocks: " + str(num_blocks))
 	
 	iter_count = 0
@@ -49,6 +50,7 @@ def train_model(params):
 		total_nloss = 0
 		total_eloss = 0
 		total_sloss = 0
+		start_time = time.time()
 		for i in range(int(math.ceil(data_size/params.batch_size))):
 			optimizer.zero_grad()
 			train_data, train_data_normal, seq_len = next(train_data_loader)
@@ -117,6 +119,7 @@ def train_model(params):
 			optimizer.step()
 				
 			iter_count += params.batch_size
-		print ("Epoch Completed")
+		end_time = time.time()
+		print ("Epoch Completed, Time taken: %f"%(end_time-start_time))
 		print("Loss on epoch %i,  LR = %f;Losses = T:%f,C:%f,L:%f,N:%f,E:%f" % (epoch, optimizer.param_groups[0]['lr'], total_loss,total_closs,total_laploss,total_nloss,total_eloss))
 
