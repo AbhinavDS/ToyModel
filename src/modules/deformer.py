@@ -21,7 +21,7 @@ class Deformer(nn.Module):
 		self.W_p = nn.Linear(2*self.feature_size,self.feature_size)
 		self.W_c = nn.Linear(self.feature_size,self.dim_size)
 		self.W_ic = nn.Linear(self.dim_size,self.feature_size)
-		self.W_lol = nn.Linear(self.feature_size,self.dim_size)
+		self.W_final = nn.Linear(self.feature_size,self.dim_size)
 		self.a = nn.Tanh()
 		# Initialize weights according to the Xavier Glorot formula
 		nn.init.xavier_uniform_(self.W_p_c.weight)
@@ -29,7 +29,7 @@ class Deformer(nn.Module):
 		nn.init.xavier_uniform_(self.W_p.weight)
 		nn.init.xavier_uniform_(self.W_c.weight)
 		nn.init.xavier_uniform_(self.W_ic.weight)
-		nn.init.xavier_uniform_(self.W_lol.weight)
+		nn.init.xavier_uniform_(self.W_final.weight)
 
 	def add_layer(self,layer,init=True):
 		self.layers.append(layer)
@@ -57,7 +57,7 @@ class Deformer(nn.Module):
 			x = self.a(self.layers[i](x)+torch.bmm(temp_A,self.layers[i+1](x)) + x)
 		#c = self.a(self.W_c(x)+c_prev)
 		# c = self.a(self.W_p_s(s_prev[0,:]))#+c_prev)
-		c = self.a(self.W_lol(x))
+		c = self.a(self.W_final(x))
 		s = s_prev
 		#print(x)
 		#c = c.view((-1,2))
