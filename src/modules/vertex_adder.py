@@ -5,8 +5,9 @@ from torch.autograd import Variable
 from  src import dtype, dtypeL, dtypeB
 
 class VertexAdder(nn.Module):
-	def __init__(self):
+	def __init__(self,toss):
 		super(VertexAdder, self).__init__()
+		self.toss = toss
 
 	def forward(self, x_prev, c_prev, A):
 		# dim A: batch_size x verices x verices
@@ -31,6 +32,9 @@ class VertexAdder(nn.Module):
 			for j in range(i+1, num_vertices):				
 				mask = np.expand_dims(A[:,i,j],1)
 				#mask: batch_size
+				toss = np.random.uniform()
+				if toss < self.toss:
+					continue:
 				temp_A_new = np.zeros((batch_size, final_num_vertices, final_num_vertices))
 
 				#add vertex between them

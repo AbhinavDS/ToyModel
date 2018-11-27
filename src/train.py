@@ -32,7 +32,7 @@ def train_model(params):
 	if params.load_model_path:
 		deformer.load_state_dict(torch.load(params.load_model_path))
 	
-	adder = VertexAdder().cuda()
+	adder = VertexAdder(params['add_prob']).cuda()
 	criterionC = ChamferLoss()
 	criterionN = NormalLoss()
 	criterionL = LaplacianLoss()

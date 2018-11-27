@@ -16,9 +16,9 @@ def parseArgs():
     parser.add_argument('-lr','--lr', type=float, default=1e-5, help='See variable name')
     parser.add_argument('--step_size', type=int, default=100, help='See variable name')
     parser.add_argument('--gamma', type=float, default=0.8, help='See variable name')
-    parser.add_argument('--lambda_n', type=float, default=1e-4, help='See variable name')
-    parser.add_argument('--lambda_lap', type=float, default=0.6, help='See variable name')
-    parser.add_argument('--lambda_e', type=float, default=0.198, help='See variable name')
+    parser.add_argument('--lambda_n', type=float, default=1e-5, help='See variable name')
+    parser.add_argument('--lambda_lap', type=float, default=0.2, help='See variable name')
+    parser.add_argument('--lambda_e', type=float, default=0.1, help='See variable name')
     parser.add_argument('--data_dir', type=str, default='data/1/', help='See variable name')
     parser.add_argument('--suffix', type=str, default='train', help='See variable name')
     parser.add_argument('--feature_scale', type=int, default=10, help='See variable name')
@@ -26,6 +26,7 @@ def parseArgs():
     parser.add_argument('--img_width', type=int, default=600, help='See variable name')
     parser.add_argument('--img_height', type=int, default=600, help='See variable name')
     parser.add_argument('-t','--test', dest='test', default = False, action='store_true',help='See variable name')
+    parser.add_argument('--add_prob', type=float, default=0.5, help='See variable name')
     args = parser.parse_args()
 
     return args
