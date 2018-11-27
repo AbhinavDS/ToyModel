@@ -1,6 +1,7 @@
 import torch
 import numpy as np
 import os
+from src.util import utils
 
 PAD_TOKEN = -2
 MEAN = 300
@@ -46,24 +47,7 @@ def getDataLoader(params):
 			
 			assert(params.dim_size == 2)
 			#1d projection of 2d mesh
-			proj_data_line = np.zeros(params.img_width,dtype=float)
-			p = 0
-			minx = params.img_width -1 
-			maxx = 0
-			while True:
-				if p <= feature_size-2 and polygons_data_line[0,p] == PAD_TOKEN and polygons_data_line[0,p+2] == PAD_TOKEN:
-					proj_data_line[minx:maxx+1] = 1.0
-					break
-				if polygons_data_line[0,p] == PAD_TOKEN:
-					p += 2
-					proj_data_line[minx:maxx+1] = 1.0
-					minx = params.img_width -1
-					maxx = 0
-					continue
-				minx = min(minx,int(polygons_data_line[0,p]))
-				maxx = max(maxx,int(polygons_data_line[0,p]))
-				p += 2
-			proj_data_line = np.expand_dims(proj_data_line,axis = 0)
+			proj_data_line = utils.project_1d(polygons_data_line,params,PAD_TOKEN,feature_size)
 
 			polygons_data_line[polygons_data_line==PAD_TOKEN] = PAD_TOKEN*VAR + MEAN
 			polygons_data_line = (polygons_data_line - MEAN)/VAR

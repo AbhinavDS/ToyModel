@@ -80,3 +80,24 @@ def create_mask(gt, seq_len):
 	seq_len_check = np.tile(seq_len_check,(1, gt.size(1)))
 	condition = (mask < seq_len_check)
 	return condition.astype(np.uint8)
+
+def project_1d(polygons_data_line,params, PAD_TOKEN, feature_size):
+	proj_data_line = np.zeros(params.img_width,dtype=float)
+	p = 0
+	minx = params.img_width -1 
+	maxx = 0
+	while True:
+		if p <= feature_size-2 and polygons_data_line[0,p] == PAD_TOKEN and polygons_data_line[0,p+2] == PAD_TOKEN:
+			proj_data_line[minx:maxx+1] = 1.0
+			break
+		if polygons_data_line[0,p] == PAD_TOKEN:
+			p += 2
+			proj_data_line[minx:maxx+1] = 1.0
+			minx = params.img_width -1
+			maxx = 0
+			continue
+		minx = min(minx,int(polygons_data_line[0,p]))
+		maxx = max(maxx,int(polygons_data_line[0,p]))
+		p += 2
+	proj_data_line = np.expand_dims(proj_data_line,axis = 0)
+	return proj_data_line
