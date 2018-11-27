@@ -2,7 +2,7 @@ import torch
 import numpy as np
 import os
 
-PAD_TOKEN = -1
+PAD_TOKEN = -2
 MEAN = 300
 VAR = 300
 if torch.cuda.is_available():
@@ -23,7 +23,7 @@ def getMetaData(params):
 def getDataLoader(params):
 	f_polygons_path = os.path.join(params.data_dir,'polygons_%s.dat'%params.suffix)
 	f_normals_path = os.path.join(params.data_dir,'normals_%s.dat'%params.suffix)
-	_, feature_size, _ = getMetaData(params)
+	max_vertices, feature_size, _ = getMetaData(params)
 	iter_count = 0
 	while True:
 		f_polygons = open(f_polygons_path, 'r')
@@ -31,6 +31,7 @@ def getDataLoader(params):
 
 		polygons_data = np.array([])
 		normals_data = np.array([])
+		proj_data = np.array([])
 		seq_len = np.array([])
 		polygons_line = f_polygons.readline()
 		normals_line = f_normals.readline()
@@ -42,27 +43,57 @@ def getDataLoader(params):
 			polygons_data_line = np.fromstring(polygons_line, dtype=float, sep=',')
 			cur_seq_len = int(len(polygons_data_line)/params.dim_size)
 			polygons_data_line = np.expand_dims(np.pad(polygons_data_line,(0,feature_size-len(polygons_data_line)),'constant',constant_values=(0,PAD_TOKEN)),0)
+			
+			#1d projection of 2d mesh
+			proj_data_line = np.zeros(params.img_width,dtype=float)
+			p = 0
+			c = 0
+			minx = params.img_width -1 
+			maxx = 0
+			while True:
+				if c >= max_vertices:
+					break
+				if p >=2 and polygons_data_line[0,p] == PAD_TOKEN and polygons_data_line[0,p-2] == PAD_TOKEN:
+					break
+				if polygons_data_line[0,p] == PAD_TOKEN:
+					p += 2
+					proj_data_line[minx:maxx+1] = 1.0
+					minx = params.img_width -1
+					maxx = 0
+					continue
+				minx = min(minx,int(polygons_data_line[0,p]))
+				maxx = max(maxx,int(polygons_data_line[0,p]))
+				p += 2
+				c += 1
+			proj_data_line = np.expand_dims(proj_data_line,axis = 0)
+
 			polygons_data_line[polygons_data_line==PAD_TOKEN] = PAD_TOKEN*VAR + MEAN
 			polygons_data_line = (polygons_data_line - MEAN)/VAR
 
+			
 			#normals
 			normals_data_line = np.fromstring(normals_line, dtype=float, sep=',')
 			normals_data_line = np.expand_dims(np.pad(normals_data_line,(0,feature_size-len(normals_data_line)),'constant',constant_values=(0,PAD_TOKEN)),0)
+			
 			
 			if(len(polygons_data)==0):
 				polygons_data = polygons_data_line
 				normals_data = normals_data_line
 				seq_len = np.array([cur_seq_len])
+				proj_data = proj_data_line
 			else:
 				polygons_data = np.concatenate((polygons_data, polygons_data_line),axis=0)
 				normals_data = np.concatenate((normals_data, normals_data_line),axis=0)
 				seq_len = np.concatenate((seq_len, np.array([cur_seq_len])),axis=0)
+				proj_data = np.concatenate((proj_data,proj_data_line),axis=0)
+
 			if iter_count >= params.batch_size:
-				yield polygons_data, normals_data, seq_len
+				yield polygons_data, normals_data, seq_len, proj_data
 				iter_count = 0
 				polygons_data = np.array([])
 				normals_data = np.array([])
 				seq_len = np.array([])
+				proj_data = np.array([])
 
 			polygons_line = f_polygons.readline()
 			normals_line = f_normals.readline()

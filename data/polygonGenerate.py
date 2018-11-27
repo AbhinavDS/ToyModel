@@ -9,7 +9,7 @@ def parseArgs():
 	parser = argparse.ArgumentParser(description='polygonGenerate.py')
 	
 	# General system running and configuration options  
-	parser.add_argument('-p','--pad_token', type=str, default=', -1,-1,', help='Pad token to separate polygons in same data instance')
+	parser.add_argument('-p','--pad_token', type=str, default=',-1,-1,', help='Pad token to separate polygons in same data instance')
 	parser.add_argument('-s','--suffix', type=str, default='train', help='suffix_name')
 	parser.add_argument('-d','--data_size', type=int, default=1000, help='Data size')
 	parser.add_argument('-n','--num_polygons', type=int, default=1, help='num of polygons per instance')

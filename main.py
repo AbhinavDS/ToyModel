@@ -22,7 +22,10 @@ def parseArgs():
     parser.add_argument('--suffix', type=str, default='train', help='See variable name')
     parser.add_argument('--feature_scale', type=int, default=10, help='See variable name')
     parser.add_argument('--dim_size', type=int, default=2, help='See variable name')
+    parser.add_argument('--img_width', type=int, default=600, help='See variable name')
+    parser.add_argument('--img_height', type=int, default=600, help='See variable name')
     args = parser.parse_args()
+
     return args
 
 if __name__=="__main__":
