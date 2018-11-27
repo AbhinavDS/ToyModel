@@ -2,6 +2,7 @@ import numpy as np
 from PIL import Image, ImageDraw
 MEAN = 300
 VAR = 300
+PAD_TOKEN = -2
 def inputMesh(feature_size):
 	c1= np.expand_dims(np.array([0,-0.9]),0)
 	c2= np.expand_dims(np.array([-0.9,0.9]),0)
@@ -18,7 +19,7 @@ def inputMesh(feature_size):
 def getPixels(c):
 	return (c*VAR + MEAN).tolist()
 
-def drawPolygons(polygons,polygonsgt, proj_data=None, color='red',out='out.png',A=None):
+def drawPolygons(polygons,polygonsgt, proj_pred=None, proj_gt=None, color='red',out='out.png',A=None):
 	black = (0,0,0)
 	white=(255,255,255)
 	im = Image.new('RGB', (600, 600), white)
@@ -40,7 +41,6 @@ def drawPolygons(polygons,polygonsgt, proj_data=None, color='red',out='out.png',
 				#print(A)
 				if(A[i,j]):					
 					draw.line((tuple(verts[i]),tuple(verts[j])), width=2, fill=black )
-	color = 'green'					
 	verts = vertsgt
 	points = tuple(tuple(x) for x in verts)
 	i = 0
@@ -53,12 +53,18 @@ def drawPolygons(polygons,polygonsgt, proj_data=None, color='red',out='out.png',
 	#draw.point((points),fill=(255,0,0,0))
 	for points in polygons:
 		for point in points:
-		    draw.ellipse((point[0] - 4, point[1] - 4, point[0]  + 4, point[1] + 4), fill=color)
-		draw.polygon((points), outline='green',fill=(0,0,0,0) )
-	for i in range(im.size[0]):
-		for j in range(im.size[1]-10,im.size[1]):
-			imPxAccess[i,j] = (int(proj_data[i])*255,0,0)
-	#im.putdata(imPxAccess)
+		    draw.ellipse((point[0] - 4, point[1] - 4, point[0]  + 4, point[1] + 4), fill='green')
+		draw.polygon((points), outline='green',fill=(0,0,0,0))
+
+	# Shadow
+	if proj_gt is not None:
+		for i in range(im.size[0]):
+			for j in range(im.size[1]-10,im.size[1]):
+				imPxAccess[i,j] = (0,int(proj_gt[i])*128,0)
+	if proj_pred is not None:
+		for i in range(im.size[0]):
+			for j in range(im.size[1]-20,im.size[1]-10):
+				imPxAccess[i,j] = (int(proj_pred[i])*255,0,0)
 	im.save(out)
 
 
@@ -81,13 +87,17 @@ def create_mask(gt, seq_len):
 	condition = (mask < seq_len_check)
 	return condition.astype(np.uint8)
 
-def project_1d(polygons_data_line,params, PAD_TOKEN, feature_size):
+def project_1d(polygons_data_line,params):
 	proj_data_line = np.zeros(params.img_width,dtype=float)
+	feature_size = len(polygons_data_line[0])
 	p = 0
 	minx = params.img_width -1 
 	maxx = 0
 	while True:
-		if p <= feature_size-2 and polygons_data_line[0,p] == PAD_TOKEN and polygons_data_line[0,p+2] == PAD_TOKEN:
+		if p < feature_size-2 and polygons_data_line[0,p] == PAD_TOKEN and polygons_data_line[0,p+2] == PAD_TOKEN:
+			proj_data_line[minx:maxx+1] = 1.0
+			break
+		if p >= feature_size:
 			proj_data_line[minx:maxx+1] = 1.0
 			break
 		if polygons_data_line[0,p] == PAD_TOKEN:
@@ -101,3 +111,57 @@ def project_1d(polygons_data_line,params, PAD_TOKEN, feature_size):
 		p += 2
 	proj_data_line = np.expand_dims(proj_data_line,axis = 0)
 	return proj_data_line
+
+def flatten_pred(c,A,params):
+	#c:  num_vertsx2
+	#A:  num_vertsxnum_verts
+	num_verts = c.shape[0]
+	vertFlags = np.zeros(num_verts)
+	proj_data_line = np.zeros(params.img_width,dtype=float)
+	v = 0
+	minx = params.img_width - 1
+	maxx = 0
+	
+	start = v
+	minx = min(minx,c[v,0])
+	maxx = max(maxx,c[v,0])
+	vertFlags[v] = 1
+	for j in range(num_verts):
+		if A[v,j] and vertFlags[j]==0:
+			v = j
+			break
+	while True:
+		minx = min(minx,c[v,0])
+		maxx = max(maxx,c[v,0])
+		vertFlags[v] = 1
+		found_nbr = False
+		for j in range(num_verts):
+			if A[v,j] and vertFlags[j]==0:
+				v = j
+				found_nbr = True
+				break
+		if not found_nbr:
+			proj_data_line[minx:maxx+1] = 1.0
+			minx = params.img_width - 1
+			maxx = 0
+			found_poly = False
+			for j in range(num_verts):
+				if vertFlags[j]==0:
+					v = j
+					found_poly = True
+					break
+			if not found_poly:
+				break
+	return proj_data_line
+
+
+def flatten_pred_batch(c,A,params):
+	proj_batch = None
+	for i in range(len(c)):
+		proj = flatten_pred(np.array(c[i],dtype=int), A[i], params)
+		proj = np.expand_dims(proj, axis=0)
+		if proj_batch is None:
+			proj_batch = proj
+		else:
+			proj_batch = np.concatenate((proj_batch, proj), axis=0)
+	return proj_batch

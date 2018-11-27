@@ -47,7 +47,7 @@ def getDataLoader(params):
 			
 			assert(params.dim_size == 2)
 			#1d projection of 2d mesh
-			proj_data_line = utils.project_1d(polygons_data_line,params,PAD_TOKEN,feature_size)
+			proj_data_line = utils.project_1d(polygons_data_line,params)
 
 			polygons_data_line[polygons_data_line==PAD_TOKEN] = PAD_TOKEN*VAR + MEAN
 			polygons_data_line = (polygons_data_line - MEAN)/VAR
