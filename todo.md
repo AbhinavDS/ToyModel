@@ -11,6 +11,8 @@
  Do Splitting
  Do RNN
  Think if other losses are needed
+## Reward based sampling from buffer
+## Check on eagle data
 
 ## On Toy Model 3
  Sanity check if extension works on 2d torus 

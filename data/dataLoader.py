@@ -26,14 +26,14 @@ def getDataLoader(params):
 	f_normals_path = os.path.join(params.data_dir,'normals_%s.dat'%params.suffix)
 	max_vertices, feature_size, _ = getMetaData(params)
 	iter_count = 0
+	polygons_data = np.array([])
+	normals_data = np.array([])
+	proj_data = np.array([])
+	seq_len = np.array([])
 	while True:
 		f_polygons = open(f_polygons_path, 'r')
 		f_normals = open(f_normals_path, 'r')
 
-		polygons_data = np.array([])
-		normals_data = np.array([])
-		proj_data = np.array([])
-		seq_len = np.array([])
 		polygons_line = f_polygons.readline()
 		normals_line = f_normals.readline()
 		

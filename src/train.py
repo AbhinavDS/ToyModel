@@ -19,7 +19,7 @@ def train_model(params):
 	max_vertices, feature_size, data_size = dataLoader.getMetaData(params)
 	dim_size = params.dim_size
 	train_data_loader = dataLoader.getDataLoader(params)
-	num_blocks = int(math.ceil(np.log2(max_vertices))) - 1 #(since we start with 3 vertices already)
+	num_blocks = int(math.ceil(np.log2(max_vertices))) - 1 - 2 #(since we start with 3 vertices already)
 	print("Num Blocks: " + str(num_blocks))
 	
 	iter_count = 0
@@ -32,7 +32,7 @@ def train_model(params):
 	if params.load_model_path:
 		deformer.load_state_dict(torch.load(params.load_model_path))
 	
-	adder = VertexAdder(params['add_prob']).cuda()
+	adder = VertexAdder(params.add_prob).cuda()
 	criterionC = ChamferLoss()
 	criterionN = NormalLoss()
 	criterionL = LaplacianLoss()
@@ -91,8 +91,8 @@ def train_model(params):
 			
 
 			for block in range(num_blocks):
-				x, c, A = adder.forward(x,c,A)
-				s = torch.cat((s,s),dim=1)
+				x, c, A, s = adder.forward(x, c, A, s)
+				# s = torch.cat((s,s),dim=1)
 				c_prev = c
 				x, s, c = deformer.forward(x,s,c_prev,A)
 				

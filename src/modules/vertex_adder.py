@@ -9,7 +9,7 @@ class VertexAdder(nn.Module):
 		super(VertexAdder, self).__init__()
 		self.toss = toss
 
-	def forward(self, x_prev, c_prev, A):
+	def forward(self, x_prev, c_prev, A, s_prev):
 		# dim A: batch_size x verices x verices
 		batch_size = A.shape[0]
 		feature_size = x_prev.size(2)
@@ -28,13 +28,17 @@ class VertexAdder(nn.Module):
 		#x_prev: batch x num_vert x feat 
 		x_new =  torch.cat((x_prev,torch.zeros(batch_size,final_num_vertices-num_vertices,feature_size).type(dtype)),dim=1)
 		c_new =  torch.cat((c_prev,torch.zeros(batch_size,final_num_vertices-num_vertices,dim_size).type(dtype)),dim=1)
+		s_new =  torch.cat((s_prev,torch.zeros(batch_size,final_num_vertices-num_vertices,feature_size).type(dtype)),dim=1)
 		for i in range(num_vertices):
+			# k = i+1
 			for j in range(i+1, num_vertices):				
+				# toss = np.random.uniform()
+				# if toss < self.toss:
+				# 	continue
+				# k += 1
+			
 				mask = np.expand_dims(A[:,i,j],1)
 				#mask: batch_size
-				toss = np.random.uniform()
-				if toss < self.toss:
-					continue:
 				temp_A_new = np.zeros((batch_size, final_num_vertices, final_num_vertices))
 
 				#add vertex between them
@@ -50,13 +54,15 @@ class VertexAdder(nn.Module):
 				tv_index = torch.LongTensor(v_index).type(dtypeL)			
 				x_v = ((x_prev[:,i,:] + x_prev[:,j,:])/2)*tmask#batch x feat
 				c_v = ((c_prev[:,i,:] + c_prev[:,j,:])/2)*tmask
+				s_v = ((s_prev[:,i,:] + s_prev[:,j,:])/2)*tmask
 				x_v = x_v.unsqueeze(1)
 				c_v = c_v.unsqueeze(1)
+				s_v = s_v.unsqueeze(1)
 				tv_index = tv_index.unsqueeze(1)
 				x_new.scatter_add_(1,tv_index.repeat(1, 1, feature_size), x_v)
 				c_new.scatter_add_(1,tv_index.repeat(1, 1, dim_size), c_v)
+				s_new.scatter_add_(1,tv_index.repeat(1, 1, feature_size), s_v)
 				v_index += mask.astype(int)
 				v_index = v_index % final_num_vertices
-
-		return x_new, c_new, A_new
+		return x_new, c_new, A_new, s_new
 
