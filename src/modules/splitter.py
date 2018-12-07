@@ -27,7 +27,8 @@ class Splitter(nn.Module):
 		self.output_value = nn.Linear(int(self.image_width/8) + dim_size*2, 1)
 		nn.init.xavier_uniform_(self.merged_fc.weight)
 		nn.init.xavier_uniform_(self.output_line.weight)
-		nn.init.xavier_uniform_(self.output_value.weight)
+		nn.init.xavier_uniform_(self.output_value.weight)#I wrote code .
+												
 
 	def add_layer(self, layers, layer,init=True):
 		layers.append(layer)
