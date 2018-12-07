@@ -11,6 +11,7 @@ def parseArgs():
     parser.add_argument('-s','--save_model_path', type=str, default='ckpt/model.toy', help='save model to path')
     parser.add_argument('-bs','--batch_size', type=int, default=100, help='Batch size ')
     parser.add_argument('--show_stat', type=int, default=1, help='Show stat at every batch')
+    parser.add_argument('-sf','--sf', type=str, default='', help='suffix_name for pred')
     parser.add_argument('-n','--num_epochs', type=int, default=2000, help='See variable name')
     parser.add_argument('-d','--depth', type=int, default=0, help='See variable name')
     parser.add_argument('-lr','--lr', type=float, default=1e-5, help='See variable name')

@@ -117,7 +117,7 @@ def train_model(params):
 			total_loss += loss/len(train_data)
 				
 			proj_pred = utils.flatten_pred_batch(utils.getPixels(c), A, params)
-			condition = epoch < 150
+			condition = True#epoch < 150
 			if (iter_count % params.show_stat == 0) and condition:
 				masked_gt = gt[0].masked_select(mask[0].unsqueeze(1).repeat(1,dim_size)).reshape(-1, dim_size)
 				x1 = x2 = -0.1
@@ -125,7 +125,7 @@ def train_model(params):
 				y2 = -y1
 				reward = splitter.calculate_reward((x1,y1,x2,y2), c, A, gt, mask)
 				color = 'red' if reward[0] else 'blue'
-				utils.drawPolygons(utils.getPixels(c[0]),utils.getPixels(masked_gt),proj_pred=proj_pred[0], proj_gt=proj_gt[0], color=color,out='results/pred_rl.png',A=A[0], line=(x1,y1,x2,y2))
+				utils.drawPolygons(utils.getPixels(c[0]),utils.getPixels(masked_gt),proj_pred=proj_pred[0], proj_gt=proj_gt[0], color=color,out='results/pred_rl%s.png'%params.sf,A=A[0], line=(x1,y1,x2,y2))
 				print("Loss on epoch %i, iteration %i: LR = %f;Losses = T:%f,C:%f,L:%f,N:%f,E:%f" % (epoch, iter_count, optimizer.param_groups[0]['lr'], loss, closs, laploss, nloss, eloss))
 				torch.save(deformer.state_dict(), params.save_model_path)
 			# else:
@@ -139,7 +139,7 @@ def train_model(params):
 			else:
 				action, reward = rl_module.step(c, s, gt, A, mask, proj_pred, proj_gt)
 				color = 'red' if reward[0] else 'blue'
-				utils.drawPolygons(utils.getPixels(c[0]),utils.getPixels(masked_gt),proj_pred=proj_pred[0], proj_gt=proj_gt[0], color=color,out='results/pred_rl.png',A=A[0], line=(action[0][0],action[0][1],action[0][2],action[0][3]))
+				utils.drawPolygons(utils.getPixels(c[0]),utils.getPixels(masked_gt),proj_pred=proj_pred[0], proj_gt=proj_gt[0], color=color,out='results/pred_rl%s.png'%params.sf,A=A[0], line=(action[0][0],action[0][1],action[0][2],action[0][3]))
 				# utils.drawPolygons(utils.getPixels(c[0]),utils.getPixels(masked_gt),proj_pred=proj_pred[0], proj_gt=proj_gt[0], color=color,out='results/pred_rl.png',A=A[0], line=(action[0][0],-1,action[0][1],1))
 				
 				
