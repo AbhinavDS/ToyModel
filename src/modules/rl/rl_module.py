@@ -53,9 +53,8 @@ class RLModule:
 			# 	new_state = np.float32(new_observation)
 			# 	# push this exp in ram
 			# 	ram.add(state, action, reward, new_state)
-
 			for s,a,r,n in zip(state, action, reward, new_state):
-				self.ram.add(s,a,r,n)
+				self.ram.agg_add(s,a,r,n)
 
 			state = new_state
 
