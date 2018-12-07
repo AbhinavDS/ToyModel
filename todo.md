@@ -21,11 +21,18 @@
 
  #### 
 
- DDPG - 
+ DDPG - TONIGHT
  EAGLE
- TRAIN ON 100
- TRAIN ON 10000 or 1000
- FIX ADDER
+ TRAIN ON 100 - STARTED
+ TRAIN ON 10000 or 1000 - STARTED FOR 1000
+ FIX ADDER - NO NEED SINCE WE WILL DETERMINISTICALLY ADD IT
  HOW TO TRAIN and gen data for RL ON MULTIPLE POLYGON
  HOW TO TERMINATE SPLIT
 
+
+# Current command
+python3 main.py  --batch_size 100 -n 2000 -d 3 --data_dir data/2_1000 -s ckpt/model_2_1000.toy -sf 10000
+
+python3 main.py  --batch_size 1 -n 2000 -d 3 --data_dir data/1_plane -s ckpt/model_1_plane.toy -sf 1_plane
+
+python3 main.py  --batch_size 1 -n 2000 -d 3 --data_dir data/2 -s ckpt/model_2_1000.toy -sf 1
