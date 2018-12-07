@@ -30,12 +30,12 @@ def train_model(params):
 	for epoch in range(params.num_epochs):
 		scheduler.step()
 
-		total_loss = 0.0
 		total_closs = 0
 		total_laploss = 0
 		total_nloss = 0
 		total_eloss = 0
-
+		total_loss = 0
+		
 		start_time = time.time()
 		for i in range(int(math.ceil(data_size/params.batch_size))):
 			optimizer.zero_grad()
@@ -56,21 +56,22 @@ def train_model(params):
 			gtnormals.requires_grad = False
 
 			x, c, A = model.create_start_data()
-			total_loss, x, c, s, A = model.forward1(x, c, s, A)
+			x, c, s, A, proj_pred = model.forward1(x, c, s, A)
 
+			total_closs += model.closs/len(train_data)
+			total_laploss += model.laploss/len(train_data)
+			total_nloss += model.nloss/len(train_data)
+			total_eloss += model.eloss/len(train_data)
+			total_loss += model.loss/len(train_data)
 			
 			if (iter_count % params.show_stat == 0):
 				masked_gt = gt[0].masked_select(mask[0].unsqueeze(1).repeat(1,dim_size)).reshape(-1, dim_size)
 				utils.drawPolygons(utils.getPixels(c[0]),utils.getPixels(masked_gt),proj_pred=proj_pred[0], proj_gt=proj_gt[0], color='red',out='results/pred.png',A=A[0])
 				print("Loss on epoch %i, iteration %i: LR = %f;Losses = T:%f,C:%f,L:%f,N:%f,E:%f" % (epoch, iter_count, optimizer.param_groups[0]['lr'], loss, closs, laploss, nloss, eloss))
-				# torch.save(deformer.state_dict(), params.save_model_path)
-			# else:
-			loss = loss#/params.batch_size
-			loss.backward()#retain_graph=True)
-			optimizer.step()
-				
+				model.save(params.save_model_path)	
+			model.loss.backward()
+			optimizer.step()				
 			iter_count += params.batch_size
 		end_time = time.time()
 		print ("Epoch Completed, Time taken: %f"%(end_time-start_time))
 		print("Loss on epoch %i,  LR = %f;Losses = T:%f,C:%f,L:%f,N:%f,E:%f" % (epoch, optimizer.param_groups[0]['lr'], total_loss,total_closs,total_laploss,total_nloss,total_eloss))
-
