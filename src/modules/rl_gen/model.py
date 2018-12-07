@@ -109,7 +109,7 @@ class Actor(nn.Module):
 		x = F.relu(self.fc3(x))
 		action = F.tanh(self.fc4(x))
 		prob = F.tanh(self.fc5(x))
-
+		
 		action = action * self.action_lim
 
 		return action, prob

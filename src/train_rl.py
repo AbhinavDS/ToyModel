@@ -13,7 +13,7 @@ from src.loss.edge_loss import EdgeLoss
 from src.modules.deformer import Deformer
 from src.modules.vertex_adder import VertexAdder
 from src.modules.splitter import Splitter
-from src.modules.rl.rl_module import RLModule
+from src.modules.rl_gen.rl_module import RLModule
 
 from src import dtype, dtypeL, dtypeB
 
@@ -117,7 +117,7 @@ def train_model(params):
 			total_loss += loss/len(train_data)
 				
 			proj_pred = utils.flatten_pred_batch(utils.getPixels(c), A, params)
-			condition = True#epoch < 150
+			condition = False#epoch < 150
 			if (iter_count % params.show_stat == 0) and condition:
 				masked_gt = gt[0].masked_select(mask[0].unsqueeze(1).repeat(1,dim_size)).reshape(-1, dim_size)
 				x1 = x2 = -0.1

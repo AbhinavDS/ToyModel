@@ -63,21 +63,39 @@ class OrnsteinUhlenbeckActionNoise:
 		return self.X
 
 def calculate_split_reward(prob, c, Pid, gt, mask, params):
-	return 1
+	total_gt = 0
+	masked_gt = gt.masked_select(mask.unsqueeze(1).repeat(1,params.dim_size)).reshape(-1, params.dim_size)
+	count = 1
+	for i in range(masked_gt.size(0)):
+		if count > 1:
+			break
+		if masked_gt[i,0].item() == -2:
+			count += 1
+		else:
+			if count:
+				count = 0
+				total_gt += 1
+	total_pred = np.max(Pid)
+	split = (total_pred < total_gt)
 	
+	if split:
+		return int(prob >= 0)
+	else:
+		return int(prob < 0)
+
 def calculate_reward(points, prob, c, Pid, gt, mask, params, reward_dim=1):
 	#points: batch_size x 4
 	#Pid: adjacency matrix. Polygon id
 	
 	batch_size = c.size(0)
-	reward = torch.zeros((batch_size, reward_dim)).type(dtype)
+	reward = np.zeros((batch_size, reward_dim), dtype=np.float32)
 	
 	for b in range(batch_size):
 		num_intersections = 0
 		edges = []
 
 		[p1, q1, p2, q2] = points[b].tolist()
-		reward[b][1] = calculate_split_reward(prob, c, Pid, gt, mask, params)
+		reward[b][1] = calculate_split_reward(prob[b][0], c[b], Pid[b], gt[b], mask[b], params)
 		# [p1, p2] = points[b].tolist()
 		# q1 = -1; q2 = 1;
 		num_verts = Pid[b].shape[0]

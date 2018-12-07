@@ -53,7 +53,9 @@ class Trainer:
 		:return: sampled action (Numpy array)
 		"""
 		state = Variable(torch.from_numpy(state))
-		action, prob = self.target_actor.forward(state).detach()
+		action, prob = self.target_actor.forward(state)
+		action = action.detach()
+		prob = prob.detach()
 		return action.data.numpy(), prob.data.numpy()
 
 	def get_exploration_action(self, state):
@@ -63,7 +65,9 @@ class Trainer:
 		:return: sampled action (Numpy array)
 		"""
 		state = Variable(torch.from_numpy(state))
-		action, prob = self.actor.forward(state).detach()
+		action, prob = self.actor.forward(state)
+		action = action.detach()
+		prob = prob.detach()
 		new_action = action.data.numpy() + (self.noise.sample() * self.action_lim)
 		return new_action, prob.data.numpy()
 

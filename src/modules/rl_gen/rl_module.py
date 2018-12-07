@@ -17,7 +17,7 @@ class RLModule:
 		self.params = params
 
 		S_DIM = 2*params.img_width + params.feature_size
-		A_DIM = 5
+		A_DIM = 4
 		A_MAX = 1
 		P_DIM = 1
 
