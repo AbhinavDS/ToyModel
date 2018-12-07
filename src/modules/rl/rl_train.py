@@ -10,9 +10,9 @@ import math
 from . import utils
 from . import model
 
-LEARNING_RATE = 1e-4
+LEARNING_RATE = 1e-3
 GAMMA = 0.99
-TAU = 0.01
+TAU = 0.1
 
 
 class Trainer:
@@ -105,7 +105,7 @@ class Trainer:
 
 		# if self.iter % 100 == 0:
 		print ('Iteration :- ', self.iter, ' Loss_actor :- ', loss_actor.data.numpy(),\
-			' Loss_critic :- ', loss_critic.data.numpy())#, y_predicted,r1)
+			' Loss_critic :- ', loss_critic.data.numpy(), y_predicted[0].data.numpy(),r1.data.numpy())
 		self.iter += 1
 
 	def save_models(self, episode_count):
