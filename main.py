@@ -1,4 +1,4 @@
-from src.train import train_model
+from src.train_rl import train_model
 from src.test import test_model
 import argparse
 
@@ -9,7 +9,7 @@ def parseArgs():
     # General system running and configuration options
     parser.add_argument('-l','--load_model_path', type=str, default='', help='load model from path')
     parser.add_argument('-s','--save_model_path', type=str, default='ckpt/model.toy', help='save model to path')
-    parser.add_argument('--batch_size', type=int, default=100, help='Batch size ')
+    parser.add_argument('-bs','--batch_size', type=int, default=100, help='Batch size ')
     parser.add_argument('--show_stat', type=int, default=1, help='Show stat at every batch')
     parser.add_argument('-n','--num_epochs', type=int, default=2000, help='See variable name')
     parser.add_argument('-d','--depth', type=int, default=0, help='See variable name')

@@ -19,7 +19,7 @@ def inputMesh(feature_size):
 def getPixels(c):
 	return (c*VAR + MEAN).tolist()
 
-def drawPolygons(polygons,polygonsgt, proj_pred=None, proj_gt=None, color='red',out='out.png',A=None):
+def drawPolygons(polygons,polygonsgt, proj_pred=None, proj_gt=None, color='red',out='out.png',A=None, line=None):
 	black = (0,0,0)
 	white=(255,255,255)
 	im = Image.new('RGB', (600, 600), white)
@@ -64,7 +64,18 @@ def drawPolygons(polygons,polygonsgt, proj_pred=None, proj_gt=None, color='red',
 	if proj_pred is not None:
 		for i in range(im.size[0]):
 			for j in range(im.size[1]-20,im.size[1]-10):
-				imPxAccess[i,j] = (int(proj_pred[i])*255,0,0)
+				if color == 'red':
+					imPxAccess[i,j] = (int(proj_pred[i])*255,0,0)
+				else:
+					imPxAccess[i,j] = (0,0,int(proj_pred[i])*255)
+
+	if line is not None:
+		x1,y1,x2,y2 = line
+		x1 = x1*VAR + MEAN
+		y1 = y1*VAR + MEAN
+		x2 = x2*VAR + MEAN
+		y2 = y2*VAR + MEAN
+		draw.line(((x1,y1),(x2,y2)), width=5, fill=black)
 	im.save(out)
 
 
@@ -165,3 +176,4 @@ def flatten_pred_batch(c,A,params):
 		else:
 			proj_batch = np.concatenate((proj_batch, proj), axis=0)
 	return proj_batch
+
