@@ -67,7 +67,7 @@ def calculate_reward(points, c, Pid, gt, mask, params):
 		#Pid: adjacency matrix. Polygon id
 		
 		batch_size = c.size(0)
-		reward = torch.zeros((batch_size)).type(dtype)
+		reward = np.zeros((batch_size,1), dtype=np.float32)
 		
 		for b in range(batch_size):
 			num_intersections = 0

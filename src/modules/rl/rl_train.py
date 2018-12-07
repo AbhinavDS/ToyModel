@@ -70,7 +70,7 @@ class Trainer:
 		Samples a random batch from replay memory and performs optimization
 		:return:
 		"""
-		s1,a1,r1,s2 = self.ram.sample(self.batch_size)
+		s1,a1,r1,s2 = self.ram.agg_sample(self.batch_size)
 
 		s1 = Variable(torch.from_numpy(s1))
 		a1 = Variable(torch.from_numpy(a1))
@@ -88,7 +88,7 @@ class Trainer:
 		# y_pred = Q( s1, a1)
 		y_predicted = torch.squeeze(self.critic.forward(s1, a1))
 		# compute critic loss, and update the critic
-		loss_critic = F.smooth_l1_loss(y_predicted, y_expected)
+		loss_critic = F.smooth_l1_loss(y_predicted, y_expected.squeeze())
 		self.critic_optimizer.zero_grad()
 		loss_critic.backward()
 		self.critic_optimizer.step()
@@ -105,7 +105,7 @@ class Trainer:
 
 		# if self.iter % 100 == 0:
 		print ('Iteration :- ', self.iter, ' Loss_actor :- ', loss_actor.data.numpy(),\
-			' Loss_critic :- ', loss_critic.data.numpy(), y_predicted,r1)
+			' Loss_critic :- ', loss_critic.data.numpy())#, y_predicted,r1)
 		self.iter += 1
 
 	def save_models(self, episode_count):
