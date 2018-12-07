@@ -5,6 +5,9 @@ import argparse
 import os
 #from src.util import utils
 
+def distance(a,b):
+	return np.math.sqrt((a[0] - b[0])**2 + (a[1] - b[1])**2)
+
 def parseArgs():
 	parser = argparse.ArgumentParser(description='polygonGenerate.py')
 	
@@ -18,6 +21,20 @@ def parseArgs():
 	parser.add_argument('-o','--no_overlap', dest='no_overlap', default=False, action='store_true', help='creates polygons with no overlap in y dimension')
 	args = parser.parse_args()
 	return args
+def interpolate(a,b,length):
+	dist = distance(a,b)
+	n = int(dist*10/length)
+	if n == 0:
+		return []
+	l = (np.array(list(b)) - np.array(list(a)))/n
+	points = []
+	curr = np.array(list(a))
+	for i in range(n-1):
+		points.append(tuple((curr+l).tolist()))
+		curr = curr + l
+	return points
+
+
 
 def generatePolygon( ctrX, ctrY, aveRadius):
 	'''Start with the centre of the polygon at ctrX, ctrY, 
@@ -48,20 +65,36 @@ def generatePolygon( ctrX, ctrY, aveRadius):
 	points = []
 	y = ctrY
 	points.append( (int(ctrX+tail_wid),int(y-length/2)) )
+	points += interpolate((int(ctrX+tail_wid),int(y-length/2)),(int(ctrX+tail_wid),int(y-length/2+tail_len)),length)
+	print(interpolate((int(ctrX+tail_wid),int(y-length/2)),(int(ctrX+tail_wid),int(y-length/2+tail_len)),length))
 	points.append( (int(ctrX+tail_wid),int(y-length/2+tail_len)) )
+	points += interpolate((int(ctrX+tail_wid),int(y-length/2+tail_len)),(int(ctrX+thickness),int(y-length/2+tail_len)),length)
 	points.append( (int(ctrX+thickness),int(y-length/2+tail_len)) )
+	points += interpolate((int(ctrX+thickness),int(y-length/2+tail_len)),(int(ctrX+thickness),int(y-length/2+tail_len+bot_len)),length)
 	points.append( (int(ctrX+thickness),int(y-length/2+tail_len+bot_len)) )
+	points += interpolate((int(ctrX+thickness),int(y-length/2+tail_len+bot_len)),(int(ctrX+thickness+wing_wid),int(y-length/2+tail_len+bot_len+wing_offset1)),length)
 	points.append( (int(ctrX+thickness+wing_wid),int(y-length/2+tail_len+bot_len+wing_offset1)) )
+	points += interpolate((int(ctrX+thickness+wing_wid),int(y-length/2+tail_len+bot_len+wing_offset1)),(int(ctrX+thickness+wing_wid),int(y-length/2+tail_len+bot_len+wing_offset1+wing_len)),length)
 	points.append( (int(ctrX+thickness+wing_wid),int(y-length/2+tail_len+bot_len+wing_offset1+wing_len)) )
+	points += interpolate((int(ctrX+thickness+wing_wid),int(y-length/2+tail_len+bot_len+wing_offset1+wing_len)),(int(ctrX+thickness),int(y-length/2+tail_len+bot_len+wing_offset1+wing_len+wing_offset2)),length)
 	points.append( (int(ctrX+thickness),int(y-length/2+tail_len+bot_len+wing_offset1+wing_len+wing_offset2)) )
+	points += interpolate((int(ctrX+thickness),int(y-length/2+tail_len+bot_len+wing_offset1+wing_len+wing_offset2)),(int(ctrX),int(y+length/2)),length)
 	points.append( (int(ctrX),int(y+length/2)) )
+	points += interpolate((int(ctrX),int(y+length/2)),(int(ctrX-thickness),int(y-length/2+tail_len+bot_len+wing_offset1+wing_len+wing_offset2)), length)
 	points.append( (int(ctrX-thickness),int(y-length/2+tail_len+bot_len+wing_offset1+wing_len+wing_offset2)) )
+	points += interpolate((int(ctrX-thickness),int(y-length/2+tail_len+bot_len+wing_offset1+wing_len+wing_offset2)), (int(ctrX-thickness-wing_wid),int(y-length/2+tail_len+bot_len+wing_offset1+wing_len)), length)
 	points.append( (int(ctrX-thickness-wing_wid),int(y-length/2+tail_len+bot_len+wing_offset1+wing_len)) )
+	points += interpolate((int(ctrX-thickness-wing_wid),int(y-length/2+tail_len+bot_len+wing_offset1+wing_len)) ,(int(ctrX-thickness-wing_wid),int(y-length/2+tail_len+bot_len+wing_offset1)), length)
 	points.append( (int(ctrX-thickness-wing_wid),int(y-length/2+tail_len+bot_len+wing_offset1)) )
+	points+= interpolate((int(ctrX-thickness-wing_wid),int(y-length/2+tail_len+bot_len+wing_offset1)),(int(ctrX-thickness),int(y-length/2+tail_len+bot_len)), length)
 	points.append( (int(ctrX-thickness),int(y-length/2+tail_len+bot_len)) )
+	points += interpolate((int(ctrX-thickness),int(y-length/2+tail_len+bot_len)),(int(ctrX-thickness),int(y-length/2+tail_len)), length)
 	points.append( (int(ctrX-thickness),int(y-length/2+tail_len)) )
+	points += interpolate((int(ctrX-thickness),int(y-length/2+tail_len)),(int(ctrX-tail_wid),int(y-length/2+tail_len)), length)
 	points.append( (int(ctrX-tail_wid),int(y-length/2+tail_len)) )
+	points += interpolate((int(ctrX-tail_wid),int(y-length/2+tail_len)),(int(ctrX-tail_wid),int(y-length/2)), length)
 	points.append( (int(ctrX-tail_wid),int(y-length/2)) )
+	points += interpolate((int(ctrX-tail_wid),int(y-length/2)),(int(ctrX+tail_wid),int(y-length/2)), length)
 
 	# generate n angle steps
 	poly = np.array([list(point) for point in points])
@@ -174,8 +207,9 @@ def dataGenerator(params):
 				if(not overlap):
 					centers.append([c_x,c_y])
 					radii.append(radius)
-			num_verts = 15
 			verts = generatePolygon(ctrX=centers[p][0], ctrY=centers[p][1], aveRadius=radii[p])
+			num_verts = len(verts)
+			max_verts = max(max_verts,num_verts)
 			polygons.append(verts)
 		writePolygons(f, polygons, pad_token)
 		allnormals = writeNormals(f_normal, polygons, pad_token)
@@ -183,7 +217,6 @@ def dataGenerator(params):
 		#w = input("we")
 	f.close()
 	f_normal.close()
-	max_verts = 15
 	f_meta = open(os.path.join(filepath,'meta_%s.dat'%suffix),'w')
 	f_meta.write(str(max_verts)+"\n")
 	f_meta.write(str(data_size))
