@@ -5,17 +5,9 @@ import numpy as np
 import random
 import math
 from data import dataLoader
-from src.util import utils
-from src.loss.chamfer_loss import ChamferLoss
-from src.loss.normal_loss import NormalLoss
-from src.loss.laplacian_loss import LaplacianLoss
-from src.loss.edge_loss import EdgeLoss
-from src.modules.deformer import Deformer
-from src.modules.vertex_adder import VertexAdder
-
+from src.model import Model
 from  src import dtype, dtypeL, dtypeB
-
-from torchviz import make_dot, make_dot_from_trace
+#from torchviz import make_dot, make_dot_from_trace
 
 def train_model(params):
 	# MAKE THE DATA loader
@@ -23,45 +15,39 @@ def train_model(params):
 	dim_size = params.dim_size
 	train_data_loader = dataLoader.getDataLoader(params)
 	num_blocks = int(math.ceil(np.log2(max_vertices))) - 1 - 2 #(since we start with 3 vertices already)
+	params.num_blocks = num_blocks
+	params.max_vertices = max_vertices
+	params.data_size = data_size
 	print("Num Blocks: " + str(num_blocks))
 	
 	iter_count = 0
-	# RUN TRAINING AND TEST
-	if torch.cuda.is_available():
-		deformer = [Deformer(feature_size,dim_size,params.depth).cuda() for i in range(num_blocks + 1)]
-	else:
-		deformer = [Deformer(feature_size,dim_size,params.depth).cuda() for i in range(num_blocks + 1)]
-
-	if params.load_model_path:
-		deformer.load_state_dict(torch.load(params.load_model_path))
-	
-	adder = VertexAdder(params.add_prob).cuda()
-	criterionC = ChamferLoss()
-	criterionN = NormalLoss()
-	criterionL = LaplacianLoss()
-	criterionE = EdgeLoss()
-	my_params = []
-	for i in range(num_blocks + 1):
-		my_params += deformer[i].parameters()
-	optimizer = optim.Adam(my_params, lr=params.lr)
+	model = Model(params)
+	optimizer = optim.Adam(model.optimizer_params, lr=params.lr)
 	scheduler = optim.lr_scheduler.StepLR(optimizer, step_size = params.step_size, gamma=params.gamma)
-	c,_,_ = utils.inputMesh(feature_size)
-
 
 	for epoch in range(params.num_epochs):
 		scheduler.step()
+
 		total_loss = 0.0
 		total_closs = 0
 		total_laploss = 0
 		total_nloss = 0
 		total_eloss = 0
-		total_sloss = 0
+
 		start_time = time.time()
 		for i in range(int(math.ceil(data_size/params.batch_size))):
 			optimizer.zero_grad()
+
 			train_data, train_data_normal, seq_len, proj_gt = next(train_data_loader)
 			# input 
+			gt = torch.Tensor(utils.reshapeGT(params,train_data)).type(dtype)#vertices x dim_size
+			gtnormals = torch.Tensor(utils.reshapeGT(params,train_data_normal)).type(dtype)#vertices x dim_size
+
+			mask = utils.create_mask(gt, seq_len)
+			mask = torch.Tensor(mask).type(dtypeB)
+
 			s = torch.Tensor(train_data).type(dtype).unsqueeze(1).repeat(1,3,1)
+
 			c,x,A = utils.inputMesh(feature_size)# x is c with zeros appended, x=f ..pixel2mesh
 			c = np.expand_dims(c, 0)
 			c = np.tile(c,(params.batch_size, 1, 1))
@@ -71,11 +57,6 @@ def train_model(params):
 			A = np.tile(A,(params.batch_size, 1, 1))
 			x = torch.Tensor(x).type(dtype)
 			c = torch.Tensor(c).type(dtype)
-			gt = torch.Tensor(utils.reshapeGT(params,train_data)).type(dtype)#vertices x dim_size
-			gtnormals = torch.Tensor(utils.reshapeGT(params,train_data_normal)).type(dtype)#vertices x dim_size
-
-			mask = utils.create_mask(gt, seq_len)
-			mask = torch.Tensor(mask).type(dtypeB)
 			
 			gt.requires_grad = False
 			loss = 0.0
@@ -83,7 +64,6 @@ def train_model(params):
 			laploss = 0
 			nloss = 0
 			eloss = 0
-
 			
 			# Vertex addition
 			for block in range(num_blocks-2):

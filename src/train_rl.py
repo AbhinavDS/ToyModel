@@ -12,7 +12,7 @@ from src.loss.laplacian_loss import LaplacianLoss
 from src.loss.edge_loss import EdgeLoss
 from src.modules.deformer import Deformer
 from src.modules.vertex_adder import VertexAdder
-from src.modules.splitter import Splitter
+import src.modules.rl.utils as utils_rl
 from src.modules.rl.rl_module import RLModule
 
 from src import dtype, dtypeL, dtypeB
@@ -31,7 +31,6 @@ def train_model(params):
 	# RUN TRAINING AND TEST
 	deformer = Deformer(feature_size,dim_size,params.depth)
 	adder = VertexAdder(params.add_prob)
-	splitter = Splitter(params.img_width, params.dim_size)
 
 	criterionC = ChamferLoss()
 	criterionN = NormalLoss()
@@ -39,8 +38,7 @@ def train_model(params):
 	criterionE = EdgeLoss()
 	if torch.cuda.is_available():
 		deformer = deformer.cuda()	
-		adder = adder.cuda()	
-		splitter = splitter.cuda()
+		adder = adder.cuda()
 
 	if params.load_model_path:
 		deformer.load_state_dict(torch.load(params.load_model_path))
@@ -126,7 +124,7 @@ def train_model(params):
 				x1 = x2 = -0.1
 				y1 = -0.5
 				y2 = -y1
-				reward = splitter.calculate_reward((x1,y1,x2,y2), c, A, gt, mask)
+				reward = utils_rl.calculate_reward((x1,y1,x2,y2), c, A, gt, mask)
 				color = 'red' if reward[0] else 'blue'
 				utils.drawPolygons(utils.getPixels(c[0]),utils.getPixels(masked_gt),proj_pred=proj_pred[0], proj_gt=proj_gt[0], color=color,out='results/pred_rl%s.png'%params.sf,A=A[0], line=(x1,y1,x2,y2))
 				print("Loss on epoch %i, iteration %i: LR = %f;Losses = T:%f,C:%f,L:%f,N:%f,E:%f" % (epoch, iter_count, optimizer.param_groups[0]['lr'], loss, closs, laploss, nloss, eloss))
