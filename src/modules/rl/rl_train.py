@@ -96,6 +96,7 @@ class Trainer:
 
 		# ---------------------- optimize actor ----------------------
 		pred_a1 = self.actor.forward(s1)
+		print(pred_a1)
 		loss_actor = -1*torch.sum(self.critic.forward(s1, pred_a1))
 		self.actor_optimizer.zero_grad()
 		loss_actor.backward()

@@ -4,6 +4,7 @@ from torch import optim
 import numpy as np
 import random
 import math
+from src.util import utils
 from data import dataLoader
 from src.model import Model
 from  src import dtype, dtypeL, dtypeB
@@ -56,7 +57,7 @@ def train_model(params):
 			gtnormals.requires_grad = False
 
 			x, c, A = model.create_start_data()
-			x, c, s, A, proj_pred = model.forward1(x, c, s, A)
+			x, c, s, A, proj_pred = model.forward1(x, c, s, A, gt, gtnormals, mask)
 
 			total_closs += model.closs/len(train_data)
 			total_laploss += model.laploss/len(train_data)
@@ -67,7 +68,7 @@ def train_model(params):
 			if (iter_count % params.show_stat == 0):
 				masked_gt = gt[0].masked_select(mask[0].unsqueeze(1).repeat(1,dim_size)).reshape(-1, dim_size)
 				utils.drawPolygons(utils.getPixels(c[0]),utils.getPixels(masked_gt),proj_pred=proj_pred[0], proj_gt=proj_gt[0], color='red',out='results/pred.png',A=A[0])
-				print("Loss on epoch %i, iteration %i: LR = %f;Losses = T:%f,C:%f,L:%f,N:%f,E:%f" % (epoch, iter_count, optimizer.param_groups[0]['lr'], loss, closs, laploss, nloss, eloss))
+				print("Loss on epoch %i, iteration %i: LR = %f;Losses = T:%f,C:%f,L:%f,N:%f,E:%f" % (epoch, iter_count, optimizer.param_groups[0]['lr'], model.loss, model.closs, model.laploss, model.nloss, model.eloss))
 				model.save(params.save_model_path)	
 			model.loss.backward()
 			optimizer.step()				

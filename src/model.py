@@ -1,6 +1,6 @@
 import time
 import torch
-from torch import optim
+import torch.nn as nn
 import numpy as np
 import random
 import math
@@ -35,8 +35,8 @@ class Model(nn.Module):
 		self.criterionE = EdgeLoss()
 		self.optimizer_params = []
 	
-		for i in range(len(deformer)):
-			self.optimizer_params += deformer[i].parameters()
+		for i in range(len(self.deformer)):
+			self.optimizer_params += self.deformer[i].parameters()
 
 		self.loss = 0.0
 		self.closs = 0.0
@@ -97,7 +97,7 @@ class Model(nn.Module):
 		self.nloss = 0.0
 		self.eloss = 0.0
 
-	def forward1(self, x, c, s, A):
+	def forward1(self, x, c, s, A, gt, gtnormals, mask):
 		self.clear_losses()
 		# Vertex addition
 		for block in range(self.params.num_blocks-self.params.start_block):
@@ -106,11 +106,11 @@ class Model(nn.Module):
 		x = self.deformer[0].embed(c)
 		c_prev = c
 		x, s, c = self.deformer[0].forward(x,s,c_prev,A)
-		norm = c.size(1) * (num_blocks + 1)
-		self.laploss = criterionL(c_prev, c, A) / norm
-		self.closs = criterionC(c, gt, mask) / norm
-		self.eloss = criterionE(c, A) / norm
-		self.nloss = criterionN(c, gt, gtnormals, A, mask) / norm
+		norm = c.size(1) * (self.params.num_blocks + 1)
+		self.laploss = self.criterionL(c_prev, c, A) / norm
+		self.closs = self.criterionC(c, gt, mask) / norm
+		self.eloss = self.criterionE(c, A) / norm
+		self.nloss = self.criterionN(c, gt, gtnormals, A, mask) / norm
 		
 
 		for block in range(self.params.num_blocks):
@@ -120,15 +120,15 @@ class Model(nn.Module):
 			c_prev = c
 			x, s, c = self.deformer[block + 1].forward(x,s,c_prev,A)
 		
-			norm = c.size(1)# * (num_blocks + 1)
-			self.laploss += (criterionL(c_prev, c, A)/norm)
-			self.closs += (criterionC(c, gt, mask)/norm)
-			self.eloss += (criterionE(c, A)/norm)
-			self.nloss += (criterionN(c, gt, gtnormals, A, mask)/norm)
+			norm = c.size(1) * (self.params.num_blocks + 1)
+			self.laploss += (self.criterionL(c_prev, c, A)/norm)
+			self.closs += (self.criterionC(c, gt, mask)/norm)
+			self.eloss += (self.criterionE(c, A)/norm)
+			self.nloss += (self.criterionN(c, gt, gtnormals, A, mask)/norm)
 		
 		self.loss = self.closs + self.params.lambda_n*self.nloss + self.params.lambda_lap*self.laploss + self.params.lambda_e*self.eloss
 			
-		proj_pred = utils.flatten_pred_batch(utils.getPixels(c), A, params)
+		proj_pred = utils.flatten_pred_batch(utils.getPixels(c), A, self.params)
 
 		return x, c, s, A, proj_pred
 
