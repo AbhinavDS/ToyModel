@@ -66,7 +66,6 @@ def generatePolygon( ctrX, ctrY, aveRadius):
 	y = ctrY
 	points.append( (int(ctrX+tail_wid),int(y-length/2)) )
 	points += interpolate((int(ctrX+tail_wid),int(y-length/2)),(int(ctrX+tail_wid),int(y-length/2+tail_len)),length)
-	print(interpolate((int(ctrX+tail_wid),int(y-length/2)),(int(ctrX+tail_wid),int(y-length/2+tail_len)),length))
 	points.append( (int(ctrX+tail_wid),int(y-length/2+tail_len)) )
 	points += interpolate((int(ctrX+tail_wid),int(y-length/2+tail_len)),(int(ctrX+thickness),int(y-length/2+tail_len)),length)
 	points.append( (int(ctrX+thickness),int(y-length/2+tail_len)) )
