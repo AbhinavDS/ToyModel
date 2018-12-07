@@ -59,9 +59,6 @@ def train_model(params):
 			total_loss, x, c, s, A = model.forward1(x, c, s, A)
 
 			
-			
-			loss
-			
 			if (iter_count % params.show_stat == 0):
 				masked_gt = gt[0].masked_select(mask[0].unsqueeze(1).repeat(1,dim_size)).reshape(-1, dim_size)
 				utils.drawPolygons(utils.getPixels(c[0]),utils.getPixels(masked_gt),proj_pred=proj_pred[0], proj_gt=proj_gt[0], color='red',out='results/pred.png',A=A[0])
