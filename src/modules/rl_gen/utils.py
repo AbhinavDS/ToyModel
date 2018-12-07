@@ -83,10 +83,9 @@ def calculate_split_reward(prob, c, Pid, gt, mask, params):
 	else:
 		return int(prob < 0)
 
-def calculate_reward(points, prob, c, Pid, gt, mask, params, reward_dim=1):
+def calculate_reward(points, prob, c, Pid, gt, mask, params, reward_dim):
 	#points: batch_size x 4
 	#Pid: adjacency matrix. Polygon id
-	
 	batch_size = c.size(0)
 	reward = np.zeros((batch_size, reward_dim), dtype=np.float32)
 	
@@ -95,7 +94,7 @@ def calculate_reward(points, prob, c, Pid, gt, mask, params, reward_dim=1):
 		edges = []
 
 		[p1, q1, p2, q2] = points[b].tolist()
-		reward[b][1] = calculate_split_reward(prob[b][0], c[b], Pid[b], gt[b], mask[b], params)
+		reward[b][1] = calculate_split_reward(prob[b], c[b], Pid[b], gt[b], mask[b], params)
 		# [p1, p2] = points[b].tolist()
 		# q1 = -1; q2 = 1;
 		num_verts = Pid[b].shape[0]

@@ -20,9 +20,10 @@ class RLModule:
 		A_DIM = 4
 		A_MAX = 1
 		P_DIM = 1
+		self.reward_dim = 2
 
 		self.ram = buffer.MemoryBuffer(self.MAX_BUFFER)
-		self.trainer = rl_train.Trainer(S_DIM, A_DIM, A_MAX, P_DIM, self.ram, params.batch_size)
+		self.trainer = rl_train.Trainer(S_DIM, A_DIM, A_MAX, P_DIM, self.ram, params.batch_size, reward_dim=self.reward_dim)
 	
 	def get_new_state(self,state):
 		#return numpy array
@@ -41,7 +42,7 @@ class RLModule:
 			# 	action = trainer.get_exploration_action(state)
 
 			#new_observation, reward, done, info = env.step(action)
-			reward = utils.calculate_reward(action, prob, c, A, gt, mask, self.params, reward_dim=2)
+			reward = utils.calculate_reward(action, prob, c, A, gt, mask, self.params, self.reward_dim)
 			new_state = self.get_new_state(state) # expects numpy array
 			
 			# # dont update if this is validation
@@ -70,7 +71,7 @@ class RLModule:
 		# process = psutil.Process(os.getpid())
 		# print(process.memory_info().rss)
 		action, prob = self.trainer.get_exploitation_action(state)
-		reward = utils.calculate_reward(action, prob, c, A, gt, mask, self.params)
+		reward = utils.calculate_reward(action, prob, c, A, gt, mask, self.params, self.reward_dim)[0]
 		# if _ep%100 == 0:
 		# 	trainer.save_models(_ep)
 		

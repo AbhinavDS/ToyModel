@@ -66,8 +66,10 @@ def drawPolygons(polygons,polygonsgt, proj_pred=None, proj_gt=None, color='red',
 			for j in range(im.size[1]-20,im.size[1]-10):
 				if color == 'red':
 					imPxAccess[i,j] = (int(proj_pred[i])*255,0,0)
-				else:
+				elif color == 'blue':
 					imPxAccess[i,j] = (0,0,int(proj_pred[i])*255)
+				else:
+					imPxAccess[i,j] = (int(proj_pred[i])*255,int(proj_pred[i])*255,0)
 
 	if line is not None:
 		x1,y1,x2,y2 = line

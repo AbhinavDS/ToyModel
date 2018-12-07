@@ -14,6 +14,9 @@ from src.modules.deformer import Deformer
 from src.modules.vertex_adder import VertexAdder
 
 from  src import dtype, dtypeL, dtypeB
+
+from torchviz import make_dot, make_dot_from_trace
+
 def train_model(params):
 	# MAKE THE DATA loader
 	max_vertices, feature_size, data_size = dataLoader.getMetaData(params)
@@ -25,9 +28,9 @@ def train_model(params):
 	iter_count = 0
 	# RUN TRAINING AND TEST
 	if torch.cuda.is_available():
-		deformer = Deformer(feature_size,dim_size,params.depth).cuda()
+		deformer = [Deformer(feature_size,dim_size,params.depth).cuda() for i in range(num_blocks + 1)]
 	else:
-		deformer = Deformer(feature_size,dim_size,params.depth)
+		deformer = [Deformer(feature_size,dim_size,params.depth).cuda() for i in range(num_blocks + 1)]
 
 	if params.load_model_path:
 		deformer.load_state_dict(torch.load(params.load_model_path))
@@ -37,7 +40,10 @@ def train_model(params):
 	criterionN = NormalLoss()
 	criterionL = LaplacianLoss()
 	criterionE = EdgeLoss()
-	optimizer = optim.Adam(deformer.parameters(), lr=params.lr)
+	my_params = []
+	for i in range(num_blocks + 1):
+		my_params += deformer[i].parameters()
+	optimizer = optim.Adam(my_params, lr=params.lr)
 	scheduler = optim.lr_scheduler.StepLR(optimizer, step_size = params.step_size, gamma=params.gamma)
 	c,_,_ = utils.inputMesh(feature_size)
 
@@ -80,27 +86,32 @@ def train_model(params):
 
 			
 			# Vertex addition
-
-			x = deformer.embed(c)
+			for block in range(num_blocks-2):
+				x, c, A, s = adder.forward(x, c, A, s)
+			
+			x = deformer[0].embed(c)
 			c_prev = c
-			x, s, c = deformer.forward(x,s,c_prev,A)
-			laploss = criterionL(c_prev, c, A)
-			closs = criterionC(c, gt, mask)
-			eloss = criterionE(c, A)
-			nloss = criterionN(c, gt, gtnormals, A, mask)
+			x, s, c = deformer[0].forward(x,s,c_prev,A)
+			norm = c.size(1) * (num_blocks + 1)
+			laploss = criterionL(c_prev, c, A) / norm
+			closs = criterionC(c, gt, mask) / norm
+			eloss = criterionE(c, A) / norm
+			nloss = criterionN(c, gt, gtnormals, A, mask) / norm
 			
 
 			for block in range(num_blocks):
-				x, c, A, s = adder.forward(x, c, A, s)
-				# s = torch.cat((s,s),dim=1)
+			# for block in range(1):
+				if block < 2:
+					x, c, A, s = adder.forward(x, c, A, s)
 				c_prev = c
-				x, s, c = deformer.forward(x,s,c_prev,A)
-				
-				laploss += criterionL(c_prev, c, A)
-				closs += criterionC(c, gt, mask)
-				eloss += criterionE(c, A)
-				nloss += criterionN(c, gt, gtnormals, A, mask)
-				
+				x, s, c = deformer[block + 1].forward(x,s,c_prev,A)
+			
+				norm = c.size(1)# * (num_blocks + 1)
+				laploss += (criterionL(c_prev, c, A)/norm)
+				closs += (criterionC(c, gt, mask)/norm)
+				eloss += (criterionE(c, A)/norm)
+				nloss += (criterionN(c, gt, gtnormals, A, mask)/norm)
+			
 			loss = closs + params.lambda_n*nloss + params.lambda_lap*laploss + params.lambda_e*eloss
 			total_closs +=closs/len(train_data)
 			total_laploss +=laploss/len(train_data)
@@ -114,7 +125,7 @@ def train_model(params):
 				masked_gt = gt[0].masked_select(mask[0].unsqueeze(1).repeat(1,dim_size)).reshape(-1, dim_size)
 				utils.drawPolygons(utils.getPixels(c[0]),utils.getPixels(masked_gt),proj_pred=proj_pred[0], proj_gt=proj_gt[0], color='red',out='results/pred.png',A=A[0])
 				print("Loss on epoch %i, iteration %i: LR = %f;Losses = T:%f,C:%f,L:%f,N:%f,E:%f" % (epoch, iter_count, optimizer.param_groups[0]['lr'], loss, closs, laploss, nloss, eloss))
-				torch.save(deformer.state_dict(), params.save_model_path)
+				# torch.save(deformer.state_dict(), params.save_model_path)
 			# else:
 			loss = loss#/params.batch_size
 			loss.backward()#retain_graph=True)

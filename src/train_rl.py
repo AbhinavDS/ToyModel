@@ -13,7 +13,7 @@ from src.loss.edge_loss import EdgeLoss
 from src.modules.deformer import Deformer
 from src.modules.vertex_adder import VertexAdder
 from src.modules.splitter import Splitter
-from src.modules.rl_gen.rl_module import RLModule
+from src.modules.rl.rl_module import RLModule
 
 from src import dtype, dtypeL, dtypeB
 
@@ -32,6 +32,7 @@ def train_model(params):
 	deformer = Deformer(feature_size,dim_size,params.depth)
 	adder = VertexAdder(params.add_prob)
 	splitter = Splitter(params.img_width, params.dim_size)
+
 	criterionC = ChamferLoss()
 	criterionN = NormalLoss()
 	criterionL = LaplacianLoss()
@@ -44,14 +45,16 @@ def train_model(params):
 	if params.load_model_path:
 		deformer.load_state_dict(torch.load(params.load_model_path))
 	
-	optimizer = optim.Adam(deformer.parameters(), lr=params.lr)
-	scheduler = optim.lr_scheduler.StepLR(optimizer, step_size = params.step_size, gamma=params.gamma)
+	for param in deformer.parameters():
+		param.requires_grad = False
+	# optimizer = optim.Adam(deformer.parameters(), lr=params.lr)
+	# scheduler = optim.lr_scheduler.StepLR(optimizer, step_size = params.step_size, gamma=params.gamma)
 	c,_,_ = utils.inputMesh(feature_size)
 
 	rl_module = RLModule(params)
 
 	for epoch in range(params.num_epochs):
-		scheduler.step()
+		# scheduler.step()
 		total_loss = 0.0
 		total_closs = 0
 		total_laploss = 0
@@ -117,9 +120,9 @@ def train_model(params):
 			total_loss += loss/len(train_data)
 				
 			proj_pred = utils.flatten_pred_batch(utils.getPixels(c), A, params)
-			condition = False#epoch < 150
+			condition = False#epoch < 300
+			masked_gt = gt[0].masked_select(mask[0].unsqueeze(1).repeat(1,dim_size)).reshape(-1, dim_size)
 			if (iter_count % params.show_stat == 0) and condition:
-				masked_gt = gt[0].masked_select(mask[0].unsqueeze(1).repeat(1,dim_size)).reshape(-1, dim_size)
 				x1 = x2 = -0.1
 				y1 = -0.5
 				y2 = -y1
@@ -127,7 +130,7 @@ def train_model(params):
 				color = 'red' if reward[0] else 'blue'
 				utils.drawPolygons(utils.getPixels(c[0]),utils.getPixels(masked_gt),proj_pred=proj_pred[0], proj_gt=proj_gt[0], color=color,out='results/pred_rl%s.png'%params.sf,A=A[0], line=(x1,y1,x2,y2))
 				print("Loss on epoch %i, iteration %i: LR = %f;Losses = T:%f,C:%f,L:%f,N:%f,E:%f" % (epoch, iter_count, optimizer.param_groups[0]['lr'], loss, closs, laploss, nloss, eloss))
-				torch.save(deformer.state_dict(), params.save_model_path)
+				# torch.save(deformer.state_dict(), params.save_model_path)
 			# else:
 
 			loss = loss#/params.batch_size
@@ -136,9 +139,10 @@ def train_model(params):
 				optimizer.zero_grad()
 				loss.backward()#retain_graph=True)
 				optimizer.step()
+				pass
 			else:
-				action, reward = rl_module.step(c, s, gt, A, mask, proj_pred, proj_gt)
-				color = 'red' if reward[0] else 'blue'
+				action, reward = rl_module.step(c, x, gt, A, mask, proj_pred, proj_gt)
+				color = 'red' if (reward[0]==2) else ('yellow' if reward[0] else 'blue')
 				utils.drawPolygons(utils.getPixels(c[0]),utils.getPixels(masked_gt),proj_pred=proj_pred[0], proj_gt=proj_gt[0], color=color,out='results/pred_rl%s.png'%params.sf,A=A[0], line=(action[0][0],action[0][1],action[0][2],action[0][3]))
 				# utils.drawPolygons(utils.getPixels(c[0]),utils.getPixels(masked_gt),proj_pred=proj_pred[0], proj_gt=proj_gt[0], color=color,out='results/pred_rl.png',A=A[0], line=(action[0][0],-1,action[0][1],1))
 				
@@ -147,5 +151,5 @@ def train_model(params):
 		end_time = time.time()
 		if condition:
 			print ("Epoch Completed, Time taken: %f"%(end_time-start_time))
-			print("Loss on epoch %i,  LR = %f;Losses = T:%f,C:%f,L:%f,N:%f,E:%f" % (epoch, optimizer.param_groups[0]['lr'], total_loss,total_closs,total_laploss,total_nloss,total_eloss))
+			print("Loss on epoch %i; Losses = T:%f,C:%f,L:%f,N:%f,E:%f" % (epoch, total_loss,total_closs,total_laploss,total_nloss,total_eloss))
 

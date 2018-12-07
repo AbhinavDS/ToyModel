@@ -33,8 +33,8 @@ class Critic(nn.Module):
 		self.fca1 = nn.Linear(action_dim,128)
 		self.fca1.weight.data = fanin_init(self.fca1.weight.data.size())
 
-		self.fca1 = nn.Linear(prob_dim,128)
-		self.fca1.weight.data = fanin_init(self.fca1.weight.data.size())
+		self.fcp1 = nn.Linear(prob_dim,128)
+		self.fcp1.weight.data = fanin_init(self.fcp1.weight.data.size())
 
 		self.fc2 = nn.Linear(384,128)
 		self.fc2.weight.data = fanin_init(self.fc2.weight.data.size())
@@ -54,7 +54,7 @@ class Critic(nn.Module):
 		s1 = F.relu(self.fcs1(state))
 		s2 = F.relu(self.fcs2(s1))
 		a1 = F.relu(self.fca1(action))
-		p1 = F.relu(self.fca1(prob))
+		p1 = F.relu(self.fcp1(prob))
 		x = torch.cat((s2,a1,p1),dim=1)
 
 		x = F.relu(self.fc2(x))
@@ -109,7 +109,7 @@ class Actor(nn.Module):
 		x = F.relu(self.fc3(x))
 		action = F.tanh(self.fc4(x))
 		prob = F.tanh(self.fc5(x))
-		
+
 		action = action * self.action_lim
 
 		return action, prob

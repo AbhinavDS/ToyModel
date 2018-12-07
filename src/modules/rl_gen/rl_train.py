@@ -17,7 +17,7 @@ TAU = 0.01
 
 class Trainer:
 
-	def __init__(self, state_dim, action_dim, action_lim, prob_dim,  ram, batch_size):
+	def __init__(self, state_dim, action_dim, action_lim, prob_dim,  ram, batch_size, reward_dim=1):
 		"""
 		:param state_dim: Dimensions of state (int)
 		:param action_dim: Dimension of action (int)
@@ -39,8 +39,8 @@ class Trainer:
 		self.target_actor = model.Actor(self.state_dim, self.action_dim, self.action_lim, self.prob_dim)
 		self.actor_optimizer = torch.optim.Adam(self.actor.parameters(),LEARNING_RATE)
 
-		self.critic = model.Critic(self.state_dim, self.action_dim, self.prob_dim)
-		self.target_critic = model.Critic(self.state_dim, self.action_dim, self.prob_dim)
+		self.critic = model.Critic(self.state_dim, self.action_dim, self.prob_dim, reward_dim=reward_dim)
+		self.target_critic = model.Critic(self.state_dim, self.action_dim, self.prob_dim, reward_dim=reward_dim)
 		self.critic_optimizer = torch.optim.Adam(self.critic.parameters(),LEARNING_RATE)
 
 		utils.hard_update(self.target_actor, self.actor)
@@ -91,7 +91,7 @@ class Trainer:
 		# next_val = torch.squeeze(self.target_critic.forward(s2, a2).detach())
 		
 		# y_exp = r + gamma*Q'( s2, pi'(s2))
-		y_expected = r1 #+ GAMMA*next_val
+		y_expected = torch.squeeze(r1) #+ GAMMA*next_val
 		# y_pred = Q( s1, a1)
 		y_predicted = torch.squeeze(self.critic.forward(s1, a1, p1))
 		# compute critic loss, and update the critic
@@ -112,7 +112,7 @@ class Trainer:
 
 		# if self.iter % 100 == 0:
 		print ('Iteration :- ', self.iter, ' Loss_actor :- ', loss_actor.data.numpy(),\
-			' Loss_critic :- ', loss_critic.data.numpy(), ' Predicted Reward :- ', y_predicted, ' Actual Reward :- ', r1)
+			' Loss_critic :- ', loss_critic.data.numpy(), ' Predicted Reward :- ', y_predicted.data.numpy(), ' Actual Reward :- ', r1.data.numpy())
 		self.iter += 1
 
 	def save_models(self, episode_count):

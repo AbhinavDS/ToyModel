@@ -1,4 +1,4 @@
-from src.train import train_model
+from src.train_rl import train_model
 from src.test import test_model
 import argparse
 

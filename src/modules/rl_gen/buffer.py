@@ -21,8 +21,6 @@ class MemoryBuffer:
 		batch = random.sample(self.buffer, count)
 		s_arr = np.float32([arr[0] for arr in batch])
 		a_arr = np.float32([arr[1] for arr in batch])
-		for arr in batch:
-			print (a_arr, arr[1], arr[2])
 		r_arr = np.float32([arr[2] for arr in batch])
 		s1_arr = np.float32([arr[3] for arr in batch])
 		p_arr = np.float32([[1.0] for arr in batch])

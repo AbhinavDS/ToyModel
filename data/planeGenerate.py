@@ -56,11 +56,11 @@ def generatePolygon( ctrX, ctrY, aveRadius):
 	bot_len = 0.4*length + 0.05*length*np.random.randn()
 	wing_offset1 = 0.05*length*np.random.randn()
 	wing_offset2 = 0.1*length + 0.02*length*np.random.randn()
-	wing_len = 0.1*length + 0.02*length*np.random.randn()
+	wing_len = 0.1*length + abs(0.02*length*np.random.randn())
 	wing_wid = 0.4*length + 0.05*length*np.random.randn()
-	tail_len = 0.1*length + 0.02*length*np.random.randn()
+	tail_len = 0.1*length + abs(0.02*length*np.random.randn())
 	tail_wid = 0.2*length + 0.02*length*np.random.randn()
-	thickness = 0.05*length + 0.02*length*np.random.randn()
+	thickness = 0.05*length + abs(0.02*length*np.random.randn())
 
 	points = []
 	y = ctrY
@@ -183,7 +183,7 @@ def dataGenerator(params):
 		radii = []
 		polygons = []
 		for p in range(num_polygons):
-			radius = 40 + 40*np.random.rand()
+			radius = abs(40 + 40*np.random.rand())
 			overlap = True
 			while(overlap):
 				c_x = 2*radius + (500-3*radius)*np.random.rand()
