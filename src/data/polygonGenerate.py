@@ -60,6 +60,8 @@ def generatePolygon( ctrX, ctrY, aveRadius, irregularity, spikeyness, numVerts) 
 		r_i = clip( random.gauss(aveRadius, spikeyness), 0, 2*aveRadius )
 		x = ctrX + r_i*math.cos(angle)
 		y = ctrY + r_i*math.sin(angle)
+		# x = max(x,0)
+		# y = max(y,0)
 		points.append( (int(x),int(y)) )
 
 		angle = angle + angleSteps[i]
@@ -84,6 +86,8 @@ def writePolygons(file,polygons, pad_token):
 		polygon  = polygons[p]
 		for v in range(len(polygon)):
 			vert = polygon[v]
+			if(vert[0]<0 or vert[1]<0 or vert[1]>600 or vert[0]>600):
+				print("come on", vert)
 			if(v == 0):
 				file.write(str(vert[0])+','+str(vert[1]))
 			else:
@@ -158,8 +162,8 @@ def dataGenerator(params):
 			radius = 40 + 10*np.random.rand()
 			overlap = True
 			while(overlap):
-				c_x = 1*radius + (500-1*radius)*np.random.rand()
-				c_y = 1*radius + (500-1*radius)*np.random.rand()
+				c_x = 1.5*radius + (500-1.5*radius)*np.random.rand()
+				c_y = 1.5*radius + (500-1.5*radius)*np.random.rand()
 				found = False
 				for i in range(len(centers)):
 					if params.no_overlap:
@@ -191,8 +195,8 @@ def dataGenerator(params):
 			polygons = getMirror(polygons)
 			writePolygons(f, polygons, pad_token)
 			allnormals = writeNormals(f_normal, polygons, pad_token)
-		# drawPolygons(polygons)#,normals = allnormals)
-		# w = input("we")
+		drawPolygons(polygons)#,normals = allnormals)
+		#w = input("we")
 	f.close()
 	f_normal.close()
 	f_meta = open(os.path.join(filepath,'meta_%s.dat'%suffix),'w')
