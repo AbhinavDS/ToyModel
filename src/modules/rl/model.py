@@ -38,7 +38,7 @@ class Critic(nn.Module):
 
 		self.fc3 = nn.Linear(self.hidden_dim,1)
 		#self.fc3.weight.data.uniform_(-EPS,EPS)
-		self.a = nn.Tanh()
+		self.a = nn.ReLU()
 	def forward(self, state, action):
 		"""
 		returns Value function Q(s,a) obtained from critic network

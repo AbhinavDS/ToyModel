@@ -50,7 +50,7 @@ class Model(nn.Module):
 		
 	def load(self, path, load_dict=None):
 		checkpoint = torch.load(path)
-
+		print ("RESTORING...")
 		model_dict = {}
 		for i in range(len(self.deformer)):
 			model_dict["Deformer_"+str(i)] = self.deformer[i]

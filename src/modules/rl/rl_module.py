@@ -18,7 +18,7 @@ class RLModule:
 
 		S_DIM = 2*params.img_width + params.feature_size
 		A_DIM = 4
-		A_MAX = 1
+		A_MAX = 2
 
 		self.ram = buffer.MemoryBuffer(self.MAX_BUFFER)
 		self.trainer = rl_train.Trainer(S_DIM, A_DIM, A_MAX, self.ram, params.batch_size)

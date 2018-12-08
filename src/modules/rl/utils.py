@@ -122,6 +122,7 @@ def calculate_reward(points, c, Pid, gt, mask, params):
 					reward[b] = 0
 				else:
 					reward[b] += 1
+		print(torch.min(c,dim))
 		return reward
 
 def line(p1,q1,p2,q2,x1,y1):
