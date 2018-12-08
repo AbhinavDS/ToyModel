@@ -51,7 +51,7 @@ class Model(nn.Module):
 		self.freeze_state = False
 
 		if params.load_model_path:
-			self.load(params.load_model_path)#, count=1400)	
+			self.load(params.load_model_path, count=9000)	
 
 	
 	def freeze(self, freeze_state):
@@ -152,8 +152,12 @@ class Model(nn.Module):
 	def forward2(self):
 		return None
 
-	def split(self, c, x, gt, A, mask, proj_pred, proj_gt, ep):
+	def split1(self, c, x, gt, A, mask, proj_pred, proj_gt, ep):
 		return self.rl_module.step(c, x, gt, A, mask, proj_pred, proj_gt, ep)
+
+
+	def split2(self, c, x, gt, A, mask, proj_pred, proj_gt, ep):
+		return self.rl_module.step_test(c, x, gt, A, mask, proj_pred, proj_gt)
 
 		# return None
 

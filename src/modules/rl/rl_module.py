@@ -69,9 +69,21 @@ class RLModule:
 		# print(process.memory_info().rss)
 		action = self.trainer.get_exploitation_action(state)
 		reward = utils.calculate_reward(action,c,A,gt,mask,self.params)
-		if _ep%200 == 0:
-			self.trainer.save_models((_ep)%10000)
+		# if _ep%200 == 0:
+		# 	self.trainer.save_models((_ep)%10000)
 		
+		return (action,reward)
+
+	def step_test(self,c, s, gt, A, mask, proj_pred, proj_gt):
+		self.trainer.actor.eval()
+		self.trainer.target_actor.eval()
+		self.trainer.critic.eval()
+		self.trainer.target_critic.eval()
+		s_avg = torch.mean(s, dim=1)
+		state = np.float32(np.concatenate((proj_gt,proj_pred, s_avg.cpu().numpy()),axis=1))
+		gc.collect()
+		action = self.trainer.get_exploitation_action(state)
+		reward = utils.calculate_reward(action,c,A,gt,mask,self.params)
 		return (action,reward)
 
 	def load(self, count):
