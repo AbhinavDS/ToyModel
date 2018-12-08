@@ -127,6 +127,11 @@ def writeNormals(file, polygons, pad_token):
 	file.write('\n')
 	return allnormals
 
+def getMirror(polygon):
+	new_polygon = []
+	for vert in polygon:
+		new_polygon.append((-1*vert[0],vert[1]))
+	return new_polygon
 
 def dataGenerator(params):
 	data_size, suffix, total_polygons, pad_token = params.data_size, params.suffix, params.num_polygons, params.pad_token
@@ -171,6 +176,8 @@ def dataGenerator(params):
 			max_verts = max(num_verts,max_verts)
 			verts = generatePolygon(ctrX=centers[p][0], ctrY=centers[p][1], aveRadius=radii[p], irregularity=0.35, spikeyness=0.2, numVerts=num_verts)
 			polygons.append(verts)
+			new_polygon = getMirror(verts)
+			polygons.append(new_polygon)
 		writePolygons(f, polygons, pad_token)
 		allnormals = writeNormals(f_normal, polygons, pad_token)
 		drawPolygons(polygons)#,normals = allnormals)
