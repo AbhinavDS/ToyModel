@@ -51,7 +51,7 @@ class Model(nn.Module):
 		self.freeze_state = False
 
 		if params.load_model_path:
-			self.load(params.load_model_path, count=200)	
+			self.load(params.load_model_path)#, count=1400)	
 
 	
 	def freeze(self, freeze_state):

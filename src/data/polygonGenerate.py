@@ -15,6 +15,7 @@ def parseArgs():
 	parser.add_argument('-n','--num_polygons', type=int, default=1, help='num of polygons per instance')
 	parser.add_argument('-sig','--sigma', type=int, default=10, help='sigma')
 	parser.add_argument('-r','--gen_random_polygons', dest='random_num_polygons', default=False, action='store_true', help='generate random number of polygons')
+	parser.add_argument('-m','--mirrored', dest='mirrored', default=False, action='store_true', help='store mirrored polygons')
 	parser.add_argument('-o','--no_overlap', dest='no_overlap', default=False, action='store_true', help='creates polygons with no overlap in y dimension')
 	args = parser.parse_args()
 	return args
@@ -127,14 +128,19 @@ def writeNormals(file, polygons, pad_token):
 	file.write('\n')
 	return allnormals
 
-def getMirror(polygon):
-	new_polygon = []
-	for vert in polygon:
-		new_polygon.append((-1*vert[0],vert[1]))
-	return new_polygon
+def getMirror(polygons):
+	new_polygons = []
+	for polygon in polygons:
+		new_polygon = []
+		for vert in polygon:
+			new_polygon.append((599-vert[0],vert[1]))
+		new_polygons.append(new_polygon)
+	return new_polygons
 
 def dataGenerator(params):
 	data_size, suffix, total_polygons, pad_token = params.data_size, params.suffix, params.num_polygons, params.pad_token
+	if params.mirrored:
+		data_size = int(math.ceil(data_size/2))
 	filepath  = "../../data/1" if total_polygons==1 else "../../data/2"
 	f = open(os.path.join(filepath,'polygons_%s.dat'%suffix),'w')
 	f_normal = open(os.path.join(filepath,'normals_%s.dat'%suffix),'w')
@@ -176,12 +182,17 @@ def dataGenerator(params):
 			max_verts = max(num_verts,max_verts)
 			verts = generatePolygon(ctrX=centers[p][0], ctrY=centers[p][1], aveRadius=radii[p], irregularity=0.35, spikeyness=0.2, numVerts=num_verts)
 			polygons.append(verts)
-			new_polygon = getMirror(verts)
-			polygons.append(new_polygon)
+		# polygons.append(new_polygon)
 		writePolygons(f, polygons, pad_token)
 		allnormals = writeNormals(f_normal, polygons, pad_token)
-		drawPolygons(polygons)#,normals = allnormals)
-		w = input("we")
+		# drawPolygons(polygons)#,normals = allnormals)
+
+		if params.mirrored:
+			polygons = getMirror(polygons)
+			writePolygons(f, polygons, pad_token)
+			allnormals = writeNormals(f_normal, polygons, pad_token)
+		# drawPolygons(polygons)#,normals = allnormals)
+		# w = input("we")
 	f.close()
 	f_normal.close()
 	f_meta = open(os.path.join(filepath,'meta_%s.dat'%suffix),'w')
