@@ -170,7 +170,7 @@ def writeNormals(file, polygons, pad_token):
 
 def dataGenerator(params):
 	data_size, suffix, total_polygons, pad_token = params.data_size, params.suffix, params.num_polygons, params.pad_token
-	filepath  = "1" if total_polygons==1 else "2"
+	filepath  = "../../data/1" if total_polygons==1 else "../../data/2"
 	f = open(os.path.join(filepath,'polygons_%s.dat'%suffix),'w')
 	f_normal = open(os.path.join(filepath,'normals_%s.dat'%suffix),'w')
 	num_polygons = total_polygons

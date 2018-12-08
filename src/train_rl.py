@@ -4,7 +4,7 @@ from torch import optim
 import numpy as np
 import random
 import math
-from data import dataLoader
+from src.data import dataLoader
 from src.util import utils
 from src.loss.chamfer_loss import ChamferLoss
 from src.loss.normal_loss import NormalLoss
