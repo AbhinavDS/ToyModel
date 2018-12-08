@@ -127,6 +127,11 @@ def writeNormals(file, polygons, pad_token):
 	file.write('\n')
 	return allnormals
 
+def getMirror(polygon):
+	new_polygon = []
+	for vert in polygon:
+		new_polygon.append((-1*vert[0],vert[1]))
+	return new_polygon
 
 def dataGenerator(params):
 	data_size, suffix, total_polygons, pad_token = params.data_size, params.suffix, params.num_polygons, params.pad_token
@@ -147,8 +152,8 @@ def dataGenerator(params):
 			radius = 40 + 10*np.random.rand()
 			overlap = True
 			while(overlap):
-				c_x = 2*radius + (500-3*radius)*np.random.rand()
-				c_y = 2*radius + (500-3*radius)*np.random.rand()
+				c_x = 1*radius + (500-1*radius)*np.random.rand()
+				c_y = 1*radius + (500-1*radius)*np.random.rand()
 				found = False
 				for i in range(len(centers)):
 					if params.no_overlap:
@@ -171,16 +176,37 @@ def dataGenerator(params):
 			max_verts = max(num_verts,max_verts)
 			verts = generatePolygon(ctrX=centers[p][0], ctrY=centers[p][1], aveRadius=radii[p], irregularity=0.35, spikeyness=0.2, numVerts=num_verts)
 			polygons.append(verts)
+			new_polygon = getMirror(verts)
+			polygons.append(new_polygon)
 		writePolygons(f, polygons, pad_token)
 		allnormals = writeNormals(f_normal, polygons, pad_token)
-		#utils.drawPolygons(polygons)#,normals = allnormals)
-		#w = input("we")
+		drawPolygons(polygons)#,normals = allnormals)
+		w = input("we")
 	f.close()
 	f_normal.close()
 	f_meta = open(os.path.join(filepath,'meta_%s.dat'%suffix),'w')
 	f_meta.write(str(max_verts)+"\n")
 	f_meta.write(str(data_size))
 	f_meta.close()
+
+def drawPolygons(polygonsgt, proj_pred=None, proj_gt=None, color='red',out='out.png',A=None, line=None):
+	black = (0,0,0)
+	white=(255,255,255)
+	im = Image.new('RGB', (600, 600), white)
+	imPxAccess = im.load()
+	draw = ImageDraw.Draw(im,'RGBA')
+	vertsgt = polygonsgt
+	# either use .polygon(), if you want to fill the area with a solid colour
+	verts = vertsgt
+	points = tuple(tuple(x) for x in verts)
+	i = 0
+	for points in polygonsgt:
+		for point in points:
+		    draw.ellipse((point[0] - 4, point[1] - 4, point[0]  + 4, point[1] + 4), fill='green')
+		draw.polygon((points), outline='green',fill=(0,0,0,0))
+
+	
+	im.save(out)
 
 if __name__ == '__main__':
     args = parseArgs()
