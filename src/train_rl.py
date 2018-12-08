@@ -88,7 +88,7 @@ def train_model(params):
 			else:
 				action, reward = model.split(c, x, gt, A, mask, proj_pred, proj_gt, epoch * params.data_size + i)
 				print (action[0],reward[0],"Image")
-				color = 'red' if (reward[0]==2) else ('yellow' if reward[0] else 'blue')
+				color = 'red' if (reward[0]==20) else ('yellow' if reward[0] else 'blue')
 				utils.drawPolygons(utils.getPixels(c[0]),utils.getPixels(masked_gt),proj_pred=proj_pred[0], proj_gt=proj_gt[0], color=color,out='results/pred_rl%s.png'%params.sf,A=A[0], line=(action[0][0],action[0][1],action[0][2],action[0][3]))
 			iter_count += params.batch_size
 		end_time = time.time()
