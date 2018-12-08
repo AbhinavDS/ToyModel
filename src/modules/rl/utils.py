@@ -62,7 +62,7 @@ class OrnsteinUhlenbeckActionNoise:
 		self.X = self.X + dx
 		return self.X
 
-def calculate_reward(points, c, Pid, gt, mask, params):
+def calculate_reward(points, c, Pid, gt, mask, params, debug = False):
 		#points: batch_size x 4
 		#Pid: adjacency matrix. Polygon id
 		
@@ -77,6 +77,24 @@ def calculate_reward(points, c, Pid, gt, mask, params):
 			# [p1, p2] = points[b].tolist()
 			# q1 = -1; q2 = 1;
 			num_verts = Pid[b].shape[0]
+			
+			masked_gt = gt[b].masked_select(mask[b].unsqueeze(1).repeat(1,params.dim_size)).reshape(-1, params.dim_size)
+			all_points = torch.cat((c[b],masked_gt), dim=0).cpu().numpy()
+			indices = list(set(np.where(all_points!=-2)[0]))
+			
+			all_points =all_points[indices]
+			left = np.min(all_points, axis=0) - 0.1
+			right = np.max(all_points, axis=0) + 0.1
+			# if p1 >= left[0] and p2 >= left[0] and p1 <= right[0] and p2 <= right[0] and q1 >= left[1] and q2 >= left[1] and q1 <= right[1] and q2 <= right[1]:
+			# print(left,right,p1,p2,q1,q2)
+			if p1 >= left[0] and p2 >= left[0] and p1 <= right[0] and p2 <= right[0]:
+			
+				reward[b] += 5
+			
+			if reward[b] == 0:
+				continue
+
+
 			for i in range(num_verts):
 				if num_intersections > 2:
 					break
@@ -89,14 +107,14 @@ def calculate_reward(points, c, Pid, gt, mask, params):
 							num_intersections += 1
 							edges.append([i,j])
 			if num_intersections != 2:
-				reward[b] = 0
+				reward[b] += 0
 				continue
 			elif Pid[b][edges[0][0],edges[0][1]] != Pid[b][edges[1][0],edges[1][1]]:
-				reward[b] = 0
+				reward[b] += 0
 				continue
 			else:
 
-				reward[b] += 1; 
+				reward[b] += 5; 
 				#continue
 
 				masked_gt = gt[b].masked_select(mask[b].unsqueeze(1).repeat(1,params.dim_size)).reshape(-1, params.dim_size)
@@ -115,14 +133,18 @@ def calculate_reward(points, c, Pid, gt, mask, params):
 						pos += 1
 					else:
 						neg += 1
+					if debug:
+						print(p1,q1,p2,q2,x1,y1,x2,y2)
 					if(intersect(p1,q1,p2,q2,x1,y1,x2,y2)):
-						reward[b] = 0
+						reward[b] += 0
+						neg = 0
+						pos = 0
 						break
 				if(pos == 0 or neg == 0):
-					reward[b] = 0
+					reward[b] += 0
 				else:
-					reward[b] += 1
-		print(torch.min(c,dim))
+					reward[b] += 10
+
 		return reward
 
 def line(p1,q1,p2,q2,x1,y1):
