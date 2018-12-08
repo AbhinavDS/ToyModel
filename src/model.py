@@ -12,6 +12,8 @@ from src.loss.laplacian_loss import LaplacianLoss
 from src.loss.edge_loss import EdgeLoss
 from src.modules.deformer import Deformer
 from src.modules.vertex_adder import VertexAdder
+from src.modules.rl.rl_module import RLModule
+
 from  src import dtype, dtypeL, dtypeB
 
 class Model(nn.Module):
@@ -23,9 +25,6 @@ class Model(nn.Module):
 			self.deformer = [Deformer(self.params.feature_size, self.params.dim_size, self.params.depth).cuda() for i in range(self.params.num_blocks + 1)]
 		else:
 			self.deformer = [Deformer(self.params.feature_size, self.params.dim_size, self.params.depth).cuda() for i in range(self.params.num_blocks + 1)]
-
-		if params.load_model_path:
-			self.load(params.load_model_path)	
 		
 		self.adder = VertexAdder(params.add_prob).cuda()
 	
@@ -47,8 +46,23 @@ class Model(nn.Module):
 		self.deformer1_dict = {}
 		for i in range(len(self.deformer)):
 			self.deformer1_dict["Deformer_"+str(i)] = self.deformer[i]
-		
-	def load(self, path, load_dict=None):
+
+		self.rl_module = RLModule(params)
+		self.freeze_state = False
+
+		if params.load_model_path:
+			self.load(params.load_model_path, count=200)	
+
+	
+	def freeze(self, freeze_state):
+		self.freeze_state = freeze_state
+		for param in self.optimizer_params:
+			param.requires_grad = freeze_state
+
+	def load_rl(self, count):
+		self.rl_module.load(count)
+
+	def load(self, path, load_dict=None, count=None):
 		checkpoint = torch.load(path)
 		print ("RESTORING...")
 		model_dict = {}
@@ -64,6 +78,9 @@ class Model(nn.Module):
 
 		for key in load_dict:
 			load_dict[key].load_state_dict(checkpoint[key])
+
+		if count:
+			self.load_rl(count)
 
 	def save(self, path, save_dict=None):
 		model_dict = {}
@@ -135,6 +152,8 @@ class Model(nn.Module):
 	def forward2(self):
 		return None
 
-	def split(self):
-		return None
+	def split(self, c, x, gt, A, mask, proj_pred, proj_gt, ep):
+		return self.rl_module.step(c, x, gt, A, mask, proj_pred, proj_gt, ep)
+
+		# return None
 

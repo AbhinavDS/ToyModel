@@ -21,13 +21,13 @@ class RLModule:
 		A_MAX = 1
 
 		self.ram = buffer.MemoryBuffer(self.MAX_BUFFER)
-		self.trainer = rl_train.Trainer(S_DIM, A_DIM, A_MAX, self.ram, params.batch_size, critic_step=1)
+		self.trainer = rl_train.Trainer(S_DIM, A_DIM, A_MAX, self.ram, params.batch_size, critic_step=3)
 	
 	def get_new_state(self,state):
 		#return numpy array
 		return state
 
-	def step(self,c, s, gt, A, mask, proj_pred, proj_gt):
+	def step(self,c, s, gt, A, mask, proj_pred, proj_gt,_ep):
 		s_avg = torch.mean(s, dim=1)
 		state = np.float32(np.concatenate((proj_gt,proj_pred, s_avg.cpu().numpy()),axis=1))
 		for r in range(self.MAX_STEPS):
@@ -69,9 +69,12 @@ class RLModule:
 		# print(process.memory_info().rss)
 		action = self.trainer.get_exploitation_action(state)
 		reward = utils.calculate_reward(action,c,A,gt,mask,self.params)
-		# if _ep%100 == 0:
-		# 	trainer.save_models(_ep)
+		if _ep%200 == 0:
+			self.trainer.save_models((_ep)%10000)
 		
 		return (action,reward)
+
+	def load(self, count):
+		self.trainer.load_models(count)
 
 

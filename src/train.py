@@ -5,7 +5,7 @@ import numpy as np
 import random
 import math
 from src.util import utils
-from data import dataLoader
+from src.data import dataLoader
 from src.model import Model
 from  src import dtype, dtypeL, dtypeB
 #from torchviz import make_dot, make_dot_from_trace

@@ -107,8 +107,14 @@ class Trainer:
 		utils.soft_update(self.target_critic, self.critic, TAU)
 
 		# if self.iter % 100 == 0:
+		if self.batch_size > 1:
+			y_1 = y_predicted.data.numpy()[0]
+			r_1 = y_predicted.data.numpy()[0]
+		else:
+			y_1 = y_predicted.data.numpy()
+			r_1 = r1.data.numpy()
 		print ('Iteration :- ', self.iter, ' Loss_actor :- ', loss_actor.data.numpy(),\
-			' Loss_critic :- ', loss_critic.data.numpy(), y_predicted.data.numpy()[0],r1.data.numpy()[0])
+			' Loss_critic :- ', loss_critic.data.numpy(), ' Critic Pred Reward :- ', y_1, ' Actual Reward :- ', r_1)
 		self.iter += 1
 
 	def save_models(self, episode_count):
@@ -117,8 +123,8 @@ class Trainer:
 		:param episode_count: the count of episodes iterated
 		:return:
 		"""
-		torch.save(self.target_actor.state_dict(), './Models/' + str(episode_count) + '_actor.pt')
-		torch.save(self.target_critic.state_dict(), './Models/' + str(episode_count) + '_critic.pt')
+		torch.save(self.target_actor.state_dict(), '/home/abhinavds/Documents/Projects/ToyModel/ckpt/rl/Models/' + str(episode_count) + '_actor.pt')
+		torch.save(self.target_critic.state_dict(), '/home/abhinavds/Documents/Projects/ToyModel/ckpt/rl/Models/' + str(episode_count) + '_critic.pt')
 		print ('Models saved successfully')
 
 	def load_models(self, episode):
@@ -127,8 +133,8 @@ class Trainer:
 		:param episode: the count of episodes iterated (used to find the file name)
 		:return:
 		"""
-		self.actor.load_state_dict(torch.load('./Models/' + str(episode) + '_actor.pt'))
-		self.critic.load_state_dict(torch.load('./Models/' + str(episode) + '_critic.pt'))
+		self.actor.load_state_dict(torch.load('/home/abhinavds/Documents/Projects/ToyModel/ckpt/rl/Models/' + str(episode) + '_actor.pt'))
+		self.critic.load_state_dict(torch.load('/home/abhinavds/Documents/Projects/ToyModel/ckpt/rl/Models/' + str(episode) + '_critic.pt'))
 		utils.hard_update(self.target_actor, self.actor)
 		utils.hard_update(self.target_critic, self.critic)
 		print ('Models loaded succesfully')
