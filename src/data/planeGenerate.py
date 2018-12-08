@@ -5,6 +5,9 @@ import argparse
 import os
 #from src.util import utils
 
+def distance(a,b):
+	return np.math.sqrt((a[0] - b[0])**2 + (a[1] - b[1])**2)
+
 def parseArgs():
 	parser = argparse.ArgumentParser(description='polygonGenerate.py')
 	
@@ -18,8 +21,22 @@ def parseArgs():
 	parser.add_argument('-o','--no_overlap', dest='no_overlap', default=False, action='store_true', help='creates polygons with no overlap in y dimension')
 	args = parser.parse_args()
 	return args
+def interpolate(a,b,length):
+	dist = distance(a,b)
+	n = int(dist*10/length)
+	if n == 0:
+		return []
+	l = (np.array(list(b)) - np.array(list(a)))/n
+	points = []
+	curr = np.array(list(a))
+	for i in range(n-1):
+		points.append(tuple((curr+l).tolist()))
+		curr = curr + l
+	return points
 
-def generatePolygon( ctrX, ctrY, aveRadius, irregularity, spikeyness, numVerts) :
+
+
+def generatePolygon( ctrX, ctrY, aveRadius):
 	'''Start with the centre of the polygon at ctrX, ctrY, 
 		then creates the polygon by sampling points on a circle around the centre. 
 		Randon noise is added by varying the angular spacing between sequential points,
@@ -34,35 +51,58 @@ def generatePolygon( ctrX, ctrY, aveRadius, irregularity, spikeyness, numVerts) 
 		no_overlap - makes sure polygons don't overlap in y dimension of 2d image (can see separately in 1d projection)
 		Returns a list of vertices, in CCW order.
 	'''
-	irregularity = clip( irregularity, 0,1 ) * 2*math.pi / numVerts
-	spikeyness = clip( spikeyness, 0,1 ) * aveRadius
+	length = 1.8*aveRadius
+
+	bot_len = 0.4*length + 0.05*length*np.random.randn()
+	wing_offset1 = 0.05*length*np.random.randn()
+	wing_offset2 = 0.1*length + 0.02*length*np.random.randn()
+	wing_len = 0.1*length + abs(0.02*length*np.random.randn())
+	wing_wid = 0.4*length + 0.05*length*np.random.randn()
+	tail_len = 0.1*length + abs(0.02*length*np.random.randn())
+	tail_wid = 0.2*length + 0.02*length*np.random.randn()
+	thickness = 0.05*length + abs(0.02*length*np.random.randn())
+
+	points = []
+	y = ctrY
+	points.append( (int(ctrX+tail_wid),int(y-length/2)) )
+	points += interpolate((int(ctrX+tail_wid),int(y-length/2)),(int(ctrX+tail_wid),int(y-length/2+tail_len)),length)
+	points.append( (int(ctrX+tail_wid),int(y-length/2+tail_len)) )
+	points += interpolate((int(ctrX+tail_wid),int(y-length/2+tail_len)),(int(ctrX+thickness),int(y-length/2+tail_len)),length)
+	points.append( (int(ctrX+thickness),int(y-length/2+tail_len)) )
+	points += interpolate((int(ctrX+thickness),int(y-length/2+tail_len)),(int(ctrX+thickness),int(y-length/2+tail_len+bot_len)),length)
+	points.append( (int(ctrX+thickness),int(y-length/2+tail_len+bot_len)) )
+	points += interpolate((int(ctrX+thickness),int(y-length/2+tail_len+bot_len)),(int(ctrX+thickness+wing_wid),int(y-length/2+tail_len+bot_len+wing_offset1)),length)
+	points.append( (int(ctrX+thickness+wing_wid),int(y-length/2+tail_len+bot_len+wing_offset1)) )
+	points += interpolate((int(ctrX+thickness+wing_wid),int(y-length/2+tail_len+bot_len+wing_offset1)),(int(ctrX+thickness+wing_wid),int(y-length/2+tail_len+bot_len+wing_offset1+wing_len)),length)
+	points.append( (int(ctrX+thickness+wing_wid),int(y-length/2+tail_len+bot_len+wing_offset1+wing_len)) )
+	points += interpolate((int(ctrX+thickness+wing_wid),int(y-length/2+tail_len+bot_len+wing_offset1+wing_len)),(int(ctrX+thickness),int(y-length/2+tail_len+bot_len+wing_offset1+wing_len+wing_offset2)),length)
+	points.append( (int(ctrX+thickness),int(y-length/2+tail_len+bot_len+wing_offset1+wing_len+wing_offset2)) )
+	points += interpolate((int(ctrX+thickness),int(y-length/2+tail_len+bot_len+wing_offset1+wing_len+wing_offset2)),(int(ctrX),int(y+length/2)),length)
+	points.append( (int(ctrX),int(y+length/2)) )
+	points += interpolate((int(ctrX),int(y+length/2)),(int(ctrX-thickness),int(y-length/2+tail_len+bot_len+wing_offset1+wing_len+wing_offset2)), length)
+	points.append( (int(ctrX-thickness),int(y-length/2+tail_len+bot_len+wing_offset1+wing_len+wing_offset2)) )
+	points += interpolate((int(ctrX-thickness),int(y-length/2+tail_len+bot_len+wing_offset1+wing_len+wing_offset2)), (int(ctrX-thickness-wing_wid),int(y-length/2+tail_len+bot_len+wing_offset1+wing_len)), length)
+	points.append( (int(ctrX-thickness-wing_wid),int(y-length/2+tail_len+bot_len+wing_offset1+wing_len)) )
+	points += interpolate((int(ctrX-thickness-wing_wid),int(y-length/2+tail_len+bot_len+wing_offset1+wing_len)) ,(int(ctrX-thickness-wing_wid),int(y-length/2+tail_len+bot_len+wing_offset1)), length)
+	points.append( (int(ctrX-thickness-wing_wid),int(y-length/2+tail_len+bot_len+wing_offset1)) )
+	points+= interpolate((int(ctrX-thickness-wing_wid),int(y-length/2+tail_len+bot_len+wing_offset1)),(int(ctrX-thickness),int(y-length/2+tail_len+bot_len)), length)
+	points.append( (int(ctrX-thickness),int(y-length/2+tail_len+bot_len)) )
+	points += interpolate((int(ctrX-thickness),int(y-length/2+tail_len+bot_len)),(int(ctrX-thickness),int(y-length/2+tail_len)), length)
+	points.append( (int(ctrX-thickness),int(y-length/2+tail_len)) )
+	points += interpolate((int(ctrX-thickness),int(y-length/2+tail_len)),(int(ctrX-tail_wid),int(y-length/2+tail_len)), length)
+	points.append( (int(ctrX-tail_wid),int(y-length/2+tail_len)) )
+	points += interpolate((int(ctrX-tail_wid),int(y-length/2+tail_len)),(int(ctrX-tail_wid),int(y-length/2)), length)
+	points.append( (int(ctrX-tail_wid),int(y-length/2)) )
+	points += interpolate((int(ctrX-tail_wid),int(y-length/2)),(int(ctrX+tail_wid),int(y-length/2)), length)
 
 	# generate n angle steps
-	angleSteps = []
-	lower = (2*math.pi / numVerts) - irregularity
-	upper = (2*math.pi / numVerts) + irregularity
-	sum = 0
-	for i in range(numVerts) :
-		tmp = random.uniform(lower, upper)
-		angleSteps.append( tmp )
-		sum = sum + tmp
-
-	# normalize the steps so that point 0 and point n+1 are the same
-	k = sum / (2*math.pi)
-	for i in range(numVerts) :
-		angleSteps[i] = angleSteps[i] / k
-
-	# now generate the points
-	points = []
-	angle = random.uniform(0, 2*math.pi)
-	for i in range(numVerts) :
-		r_i = clip( random.gauss(aveRadius, spikeyness), 0, 2*aveRadius )
-		x = ctrX + r_i*math.cos(angle)
-		y = ctrY + r_i*math.sin(angle)
-		points.append( (int(x),int(y)) )
-
-		angle = angle + angleSteps[i]
-
+	poly = np.array([list(point) for point in points])
+	poly = poly -np.array([ctrX,ctrY])
+	theta = np.random.uniform()*2*np.pi
+	R = np.array([[np.cos(theta),-np.sin(theta)],[np.sin(theta),np.cos(theta)]])
+	poly = np.matmul(poly,R)
+	poly = poly +np.array([ctrX,ctrY])
+	points = [tuple(point) for point in poly.tolist()]
 	return points
 
 def clip(x, min, max):
@@ -130,7 +170,7 @@ def writeNormals(file, polygons, pad_token):
 
 def dataGenerator(params):
 	data_size, suffix, total_polygons, pad_token = params.data_size, params.suffix, params.num_polygons, params.pad_token
-	filepath  = "1" if total_polygons==1 else "2"
+	filepath  = "../../data/1" if total_polygons==1 else "../../data/2"
 	f = open(os.path.join(filepath,'polygons_%s.dat'%suffix),'w')
 	f_normal = open(os.path.join(filepath,'normals_%s.dat'%suffix),'w')
 	num_polygons = total_polygons
@@ -139,16 +179,15 @@ def dataGenerator(params):
 	for i in range(data_size):
 		if params.random_num_polygons:
 			num_polygons = np.random.randint(1,total_polygons)
-		aveRadius = abs(50*np.random.randn())
 		centers = []
 		radii = []
 		polygons = []
 		for p in range(num_polygons):
-			radius = 40 + 10*np.random.rand()
+			radius = abs(40 + 40*np.random.rand())
 			overlap = True
 			while(overlap):
-				c_x = 1*radius + (500-1*radius)*np.random.rand()
-				c_y = 1*radius + (500-1*radius)*np.random.rand()
+				c_x = 2*radius + (500-3*radius)*np.random.rand()
+				c_y = 2*radius + (500-3*radius)*np.random.rand()
 				found = False
 				for i in range(len(centers)):
 					if params.no_overlap:
@@ -167,36 +206,37 @@ def dataGenerator(params):
 				if(not overlap):
 					centers.append([c_x,c_y])
 					radii.append(radius)
-			num_verts = int(np.ceil(abs(params.sigma*np.random.randn())+1e-10)) + 2 #3*(2**np.random.randint(0,4))
-			max_verts = max(num_verts,max_verts)
-			verts = generatePolygon(ctrX=centers[p][0], ctrY=centers[p][1], aveRadius=radii[p], irregularity=0.35, spikeyness=0.2, numVerts=num_verts)
+			verts = generatePolygon(ctrX=centers[p][0], ctrY=centers[p][1], aveRadius=radii[p])
+			num_verts = len(verts)
+			max_verts = max(max_verts,num_verts)
 			polygons.append(verts)
 		writePolygons(f, polygons, pad_token)
 		allnormals = writeNormals(f_normal, polygons, pad_token)
 		drawPolygons(polygons)#,normals = allnormals)
-		w = input("we")
+		#w = input("we")
 	f.close()
 	f_normal.close()
 	f_meta = open(os.path.join(filepath,'meta_%s.dat'%suffix),'w')
 	f_meta.write(str(max_verts)+"\n")
 	f_meta.write(str(data_size))
 	f_meta.close()
-
-def drawPolygons(polygonsgt, proj_pred=None, proj_gt=None, color='red',out='out.png',A=None, line=None):
+def drawPolygons(polygons, proj_pred=None, proj_gt=None, color='red',out='out.png',A=None, line=None):
 	black = (0,0,0)
 	white=(255,255,255)
 	im = Image.new('RGB', (600, 600), white)
 	imPxAccess = im.load()
 	draw = ImageDraw.Draw(im,'RGBA')
-	vertsgt = polygonsgt
+	verts = polygons
+	
 	# either use .polygon(), if you want to fill the area with a solid colour
-	verts = vertsgt
 	points = tuple(tuple(x) for x in verts)
+	#draw.point((points),fill=(255,0,0,0))
 	i = 0
-	for points in polygonsgt:
+	#draw.point((points),fill=(255,0,0,0))
+	for points in polygons:
 		for point in points:
 		    draw.ellipse((point[0] - 4, point[1] - 4, point[0]  + 4, point[1] + 4), fill='green')
-		draw.polygon((points), outline='green',fill=(0,0,0,0))
+		draw.polygon((points), outline='red',fill=(0,0,0,0))
 
 	
 	im.save(out)

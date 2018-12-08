@@ -21,7 +21,7 @@ class RLModule:
 		A_MAX = 1
 
 		self.ram = buffer.MemoryBuffer(self.MAX_BUFFER)
-		self.trainer = rl_train.Trainer(S_DIM, A_DIM, A_MAX, self.ram, params.batch_size)
+		self.trainer = rl_train.Trainer(S_DIM, A_DIM, A_MAX, self.ram, params.batch_size, critic_step=1)
 	
 	def get_new_state(self,state):
 		#return numpy array

@@ -55,3 +55,9 @@ python3 main.py  -n 2000 --data_dir data/10000_plane -s ckpt/model_10000_plane.t
 
 Plane 2000
 python3 main.py  --batch_size 100 -n 2000 -d 3 --data_dir data/2_1000 -s ckpt/model_2_1000.toy -sf 10000
+
+
+
+
+
+python3 main.py  --batch_size 10 -n 2000 -d 3 --data_dir data/2 -s ckpt/model_2_1000.toy -l ckpt/model_2_1000.toy -sf 1000 -lr 0.00000512

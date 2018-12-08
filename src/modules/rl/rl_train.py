@@ -17,7 +17,7 @@ TAU = 0.01
 
 class Trainer:
 
-	def __init__(self, state_dim, action_dim, action_lim, ram, batch_size):
+	def __init__(self, state_dim, action_dim, action_lim, ram, batch_size, critic_step=1):
 		"""
 		:param state_dim: Dimensions of state (int)
 		:param action_dim: Dimension of action (int)
@@ -40,6 +40,7 @@ class Trainer:
 		self.critic = model.Critic(self.state_dim, self.action_dim)
 		self.target_critic = model.Critic(self.state_dim, self.action_dim)
 		self.critic_optimizer = torch.optim.Adam(self.critic.parameters(),LEARNING_RATE)
+		self.critic_step = critic_step
 
 		utils.hard_update(self.target_actor, self.actor)
 		utils.hard_update(self.target_critic, self.critic)
@@ -77,21 +78,23 @@ class Trainer:
 		r1 = Variable(torch.from_numpy(r1))
 		s2 = Variable(torch.from_numpy(s2))
 
-		# ---------------------- optimize critic ----------------------
-		# Use target actor exploitation policy here for loss evaluation
-		
-		# a2 = self.target_actor.forward(s2).detach()
-		# next_val = torch.squeeze(self.target_critic.forward(s2, a2).detach())
-		
-		# y_exp = r + gamma*Q'( s2, pi'(s2))
-		y_expected = r1 #+ GAMMA*next_val
-		# y_pred = Q( s1, a1)
-		y_predicted = torch.squeeze(self.critic.forward(s1, a1))
-		# compute critic loss, and update the critic
-		loss_critic = F.smooth_l1_loss(y_predicted, y_expected.squeeze())
-		self.critic_optimizer.zero_grad()
-		loss_critic.backward()
-		self.critic_optimizer.step()
+		for i in range(self.critic_step):
+			# ---------------------- optimize critic ----------------------
+			# Use target actor exploitation policy here for loss evaluation
+			
+			# a2 = self.target_actor.forward(s2).detach()
+			# next_val = torch.squeeze(self.target_critic.forward(s2, a2).detach())
+			
+			# y_exp = r + gamma*Q'( s2, pi'(s2))
+			y_expected = r1 #+ GAMMA*next_val
+			# y_pred = Q( s1, a1)
+			y_predicted = torch.squeeze(self.critic.forward(s1, a1))
+			# compute critic loss, and update the critic
+			#print(y_predicted,y_expected,"hi")
+			loss_critic = F.smooth_l1_loss(y_predicted, y_expected.squeeze())
+			self.critic_optimizer.zero_grad()
+			loss_critic.backward()
+			self.critic_optimizer.step()
 
 		# ---------------------- optimize actor ----------------------
 		pred_a1 = self.actor.forward(s1)
@@ -105,7 +108,7 @@ class Trainer:
 
 		# if self.iter % 100 == 0:
 		print ('Iteration :- ', self.iter, ' Loss_actor :- ', loss_actor.data.numpy(),\
-			' Loss_critic :- ', loss_critic.data.numpy())#, y_predicted,r1)
+			' Loss_critic :- ', loss_critic.data.numpy(), y_predicted.data.numpy()[0],r1.data.numpy()[0])
 		self.iter += 1
 
 	def save_models(self, episode_count):
