@@ -79,7 +79,7 @@ class RLModule:
 		self.trainer.target_actor.eval()
 		self.trainer.critic.eval()
 		self.trainer.target_critic.eval()
-		s_avg = torch.mean(s, dim=1)
+		s_avg = torch.mean(s, dim=1).detach()
 		state = np.float32(np.concatenate((proj_gt,proj_pred, s_avg.cpu().numpy()),axis=1))
 		gc.collect()
 		action = self.trainer.get_exploitation_action(state)

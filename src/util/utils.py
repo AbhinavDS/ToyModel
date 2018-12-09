@@ -22,7 +22,7 @@ def getPixels(c):
 def drawPolygons(polygons,polygonsgt, proj_pred=None, proj_gt=None, color='red',out='out.png',A=None, line=None):
 	black = (0,0,0)
 	white=(255,255,255)
-	im = Image.new('RGB', (600, 600), white)
+	im = Image.new('RGB', (600, 620), white)
 	imPxAccess = im.load()
 	draw = ImageDraw.Draw(im,'RGBA')
 	verts = polygons
@@ -98,6 +98,10 @@ def create_mask(gt, seq_len):
 	seq_len_check = np.reshape(seq_len, (-1, 1))
 	seq_len_check = np.tile(seq_len_check,(1, gt.size(1)))
 	condition = (mask < seq_len_check)
+	return condition.astype(np.uint8)
+
+def create_loss_mask(gt):
+	condition = (gt.cpu().numpy()[:,:,0]>-2)
 	return condition.astype(np.uint8)
 
 def project_1d(polygons_data_line,params):

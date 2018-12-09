@@ -79,7 +79,7 @@ def calculate_reward(points, c, Pid, gt, mask, params, debug = False):
 			num_verts = Pid[b].shape[0]
 			
 			masked_gt = gt[b].masked_select(mask[b].unsqueeze(1).repeat(1,params.dim_size)).reshape(-1, params.dim_size)
-			all_points = torch.cat((c[b],masked_gt), dim=0).cpu().numpy()
+			all_points = torch.cat((c[b],masked_gt), dim=0).cpu().detach().numpy()
 			indices = list(set(np.where(all_points!=-2)[0]))
 			
 			all_points =all_points[indices]
