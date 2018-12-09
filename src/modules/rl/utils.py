@@ -68,7 +68,7 @@ def calculate_reward(points, c, Pid, gt, mask, params, debug = False):
 		
 		batch_size = c.size(0)
 		reward = np.zeros((batch_size,1), dtype=np.float32)
-		
+		intersections = [None]*batch_size
 		for b in range(batch_size):
 			num_intersections = 0
 			edges = []
@@ -105,7 +105,10 @@ def calculate_reward(points, c, Pid, gt, mask, params, debug = False):
 						x1, y1, x2, y2 = c[b,i,0].item(),c[b,i,1].item(),c[b,j,0].item(),c[b,j,1].item()
 						if(intersect(p1,q1,p2,q2,x1,y1,x2,y2)):
 							num_intersections += 1
-							edges.append([i,j])
+							if line(p1,q1,p2,q2,x1,y1) > 0:
+								edges.append([i,j])
+							else:
+								edges.append([j,i])
 			if num_intersections != 2:
 				reward[b] += 0
 				continue
@@ -113,7 +116,7 @@ def calculate_reward(points, c, Pid, gt, mask, params, debug = False):
 				reward[b] += 0
 				continue
 			else:
-
+				intersections[b] = edges
 				reward[b] += 5; 
 				#continue
 
@@ -145,7 +148,7 @@ def calculate_reward(points, c, Pid, gt, mask, params, debug = False):
 				else:
 					reward[b] += 10
 
-		return reward
+		return reward, intersections
 
 def line(p1,q1,p2,q2,x1,y1):
 	return (p2-p1)*y1 - (q2-q1)*x1 -(q1*p2-q2*p1)

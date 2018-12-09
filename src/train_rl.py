@@ -36,8 +36,9 @@ def train_model(params):
 
 	for epoch in range(params.num_epochs):
 		# Train this part
-		condition_train1 = epoch < 200
-		condition_train2 = epoch > 210
+		condition_train1 = False#epoch < 200
+		condition_train2 = True#epoch > 210
+		test_rl = True
 
 		if condition_train1:
 			optimizer = optimizer1
@@ -61,7 +62,8 @@ def train_model(params):
 		
 		start_time = time.time()
 		for i in range(int(math.ceil(data_size/params.batch_size))):
-			optimizer.zero_grad()
+			if condition_train1 or condition_train2:
+				optimizer.zero_grad()
 
 			train_data, train_data_normal, seq_len, proj_gt = next(train_data_loader)
 
@@ -94,8 +96,11 @@ def train_model(params):
 			masked_gt = gt[0].masked_select(mask[0].unsqueeze(1).repeat(1,dim_size)).reshape(-1, dim_size)
 
 			if not condition_train1:
-				action, reward = model.split(c, x, gt, A, mask, proj_pred, proj_gt, epoch * params.data_size + i, condition_train2)
+
+				Pid = np.copy(A)
+				action, reward, intersections = model.split(c, x, gt, A, mask, proj_pred, proj_gt, epoch * params.data_size + i, test_rl or condition_train2)
 				print (action[0],reward[0],"Image")
+				A, Pid = model.splitter.forward(Pid,intersections)
 				
 				# Split and send forward
 				if condition_train2:
@@ -121,10 +126,9 @@ def train_model(params):
 				print("Loss on epoch %i, iteration %i: LR = %f;Losses = T:%f,C:%f,L:%f,N:%f,E:%f" % (epoch, iter_count, optimizer.param_groups[0]['lr'], model.loss, model.closs, model.laploss, model.nloss, model.eloss))
 				# model.save(params.save_model_path)
 			iter_count += params.batch_size
-
 		end_time = time.time()
 		if condition_train1 or condition_train2:
 			print ("Epoch Completed, Time taken: %f"%(end_time-start_time))
 			print("Loss on epoch %i; Losses = T:%f,C:%f,L:%f,N:%f,E:%f" % (epoch, total_loss,total_closs,total_laploss,total_nloss,total_eloss))
-		scheduler.step()
+			scheduler.step()
 		

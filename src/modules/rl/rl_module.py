@@ -40,7 +40,7 @@ class RLModule:
 			# 	action = trainer.get_exploration_action(state)
 
 			#new_observation, reward, done, info = env.step(action)
-			reward = utils.calculate_reward(action,c,A,gt,mask,self.params)
+			reward,_ = utils.calculate_reward(action,c,A,gt,mask,self.params)
 			new_state = self.get_new_state(state)#expects numpy array
 			
 			# # dont update if this is validation
@@ -68,11 +68,11 @@ class RLModule:
 		# process = psutil.Process(os.getpid())
 		# print(process.memory_info().rss)
 		action = self.trainer.get_exploitation_action(state)
-		reward = utils.calculate_reward(action,c,A,gt,mask,self.params)
+		reward,intersections = utils.calculate_reward(action,c,A,gt,mask,self.params)
 		# if _ep%200 == 0:
 		# 	self.trainer.save_models((_ep)%10000)
 		
-		return (action,reward)
+		return (action,reward,intersections)
 
 	def step_test(self,c, s, gt, A, mask, proj_pred, proj_gt):
 		self.trainer.actor.eval()
@@ -83,8 +83,8 @@ class RLModule:
 		state = np.float32(np.concatenate((proj_gt,proj_pred, s_avg.cpu().numpy()),axis=1))
 		gc.collect()
 		action = self.trainer.get_exploitation_action(state)
-		reward = utils.calculate_reward(action,c,A,gt,mask,self.params)
-		return (action,reward)
+		reward,intersections  = utils.calculate_reward(action,c,A,gt,mask,self.params)
+		return (action,reward,intersections)
 
 	def load(self, count):
 		self.trainer.load_models(count)
