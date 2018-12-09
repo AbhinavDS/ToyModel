@@ -45,6 +45,7 @@ class Trainer:
 
 		self.genus = genus.Genus(self.state_dim)
 		self.genus_optimizer = torch.optim.Adam(self.genus.parameters(),LEARNING_RATE)
+		self.criterionG = nn.NLLLoss()
 		
 		utils.hard_update(self.target_actor, self.actor)
 		utils.hard_update(self.target_critic, self.critic)
@@ -136,9 +137,9 @@ class Trainer:
 	def genus_step(self, state, gt_genus):
 		state = Variable(torch.from_numpy(state))
 		gt_genus = torch.from_numpy(gt_genus)
-		gt_genus.requires_grad(False)
+		gt_genus.requires_grad  = False
 		pred_genus = self.genus.forward(state)
-		loss_genus = nn.NLLLoss(pred_genus, gt_genus)
+		loss_genus = self.criterionG(pred_genus, gt_genus)
 		self.genus_optimizer.zero_grad()
 		loss_genus.backward()
 		self.genus_optimizer.step()
@@ -149,9 +150,9 @@ class Trainer:
 		:param episode_count: the count of episodes iterated
 		:return:
 		"""
-		torch.save(self.target_actor.state_dict(), '/home/abhinavds/Documents/Projects/ToyModel/ckpt/rl/Models/' + str(episode_count) + '_actor.pt')
-		torch.save(self.target_critic.state_dict(), '/home/abhinavds/Documents/Projects/ToyModel/ckpt/rl/Models/' + str(episode_count) + '_critic.pt')
-		torch.save(self.genus.state_dict(), '/home/abhinavds/Documents/Projects/ToyModel/ckpt/rl/Models/' + str(episode_count) + '_genus.pt')
+		torch.save(self.target_actor.state_dict(), '/home/abhinavds/Documents/Projects/ToyModel/ckpt/rl/Models_genus/' + str(episode_count) + '_actor.pt')
+		torch.save(self.target_critic.state_dict(), '/home/abhinavds/Documents/Projects/ToyModel/ckpt/rl/Models_genus/' + str(episode_count) + '_critic.pt')
+		torch.save(self.genus.state_dict(), '/home/abhinavds/Documents/Projects/ToyModel/ckpt/rl/Models_genus/' + str(episode_count) + '_genus.pt')
 		print ('Models saved successfully')
 
 	def load_models(self, episode):
@@ -160,9 +161,9 @@ class Trainer:
 		:param episode: the count of episodes iterated (used to find the file name)
 		:return:
 		"""
-		self.actor.load_state_dict(torch.load('/home/abhinavds/Documents/Projects/ToyModel/ckpt/rl/Models/' + str(episode) + '_actor.pt'))
-		self.critic.load_state_dict(torch.load('/home/abhinavds/Documents/Projects/ToyModel/ckpt/rl/Models/' + str(episode) + '_critic.pt'))
-		self.genus.load_state_dict(torch.load('/home/abhinavds/Documents/Projects/ToyModel/ckpt/rl/Models/' + str(episode) + '_genus.pt'))
+		self.actor.load_state_dict(torch.load('/home/abhinavds/Documents/Projects/ToyModel/ckpt/rl/Models_genus/' + str(episode) + '_actor.pt'))
+		self.critic.load_state_dict(torch.load('/home/abhinavds/Documents/Projects/ToyModel/ckpt/rl/Models_genus/' + str(episode) + '_critic.pt'))
+		self.genus.load_state_dict(torch.load('/home/abhinavds/Documents/Projects/ToyModel/ckpt/rl/Models_genus/' + str(episode) + '_genus.pt'))
 		utils.hard_update(self.target_actor, self.actor)
 		utils.hard_update(self.target_critic, self.critic)
 		print ('Models loaded succesfully')

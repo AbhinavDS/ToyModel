@@ -40,7 +40,7 @@ class RLModule:
 			# 	action = trainer.get_exploration_action(state)
 
 			#new_observation, reward, done, info = env.step(action)
-			reward, _, _ = utils.calculate_reward(action,c,A,gt,mask,self.params)
+			reward, _ = utils.calculate_reward(action,c,A,gt,mask,self.params)
 			new_state = self.get_new_state(state)#expects numpy array
 			
 			# # dont update if this is validation
@@ -67,14 +67,16 @@ class RLModule:
 		gc.collect()
 		# process = psutil.Process(os.getpid())
 		# print(process.memory_info().rss)
-		action = self.trainer.get_exploitation_action(state)
-		reward, intersections, gt_genus = utils.calculate_reward(action,c,A,gt,mask,self.params)
-		trainer.genus_step(state, gt_genus)
+		# action = self.trainer.get_exploitation_action(state)
+		action, pred_genus = self.trainer.get_final_action(state)
+		reward, intersections = utils.calculate_reward(action,c,A,gt,mask,self.params)
+		gt_genus = utils.calculate_genus(c, A, gt, mask, self.params)
+		self.trainer.genus_step(state, gt_genus)
 
 		if _ep%200 == 0:
 			self.trainer.save_models((_ep)%10000)
 		
-		return (action,reward,intersections)
+		return (action,reward,intersections, pred_genus, gt_genus)
 
 	def step_test(self,c, s, gt, A, mask, proj_pred, proj_gt):
 		self.trainer.actor.eval()
@@ -84,9 +86,9 @@ class RLModule:
 		s_avg = torch.mean(s, dim=1).detach()
 		state = np.float32(np.concatenate((proj_gt,proj_pred, s_avg.cpu().numpy()),axis=1))
 		gc.collect()
-		action = self.trainer.get_exploitation_action(state)
-		reward, intersections, _  = utils.calculate_reward(action,c,A,gt,mask,self.params)
-		return (action,reward,intersections)
+		action, genus = self.trainer.get_final_action(state)
+		intersections  = utils.get_intersections(action, c, A, self.params)
+		return (action, genus, intersections, genus, genus)
 
 	def load(self, count):
 		self.trainer.load_models(count)

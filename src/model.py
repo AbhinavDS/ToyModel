@@ -88,9 +88,8 @@ class Model(nn.Module):
 		checkpoint = torch.load(path)
 		print ("RESTORING...")
 		model_dict = {}
-		# for i in range(len(self.deformer)):
-
-		for i in range(1 + self.params.num_blocks1):
+		for i in range(len(self.deformer)):
+		# for i in range(1 + self.params.num_blocks1):
 			model_dict["Deformer_"+str(i)] = self.deformer[i]
 		
 		if load_dict:

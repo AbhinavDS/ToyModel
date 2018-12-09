@@ -34,12 +34,12 @@ def train_model(params):
 	optimizer2 = optim.Adam(model.optimizer_params2, lr=params.lr)
 	scheduler2 = optim.lr_scheduler.StepLR(optimizer2, step_size = params.step_size, gamma=params.gamma)
 
-	re_init_train2 = True
+	re_init_train2 = False
 	for epoch in range(params.num_epochs):
 		# Train this part
 		condition_train1 = False#epoch < 1000 #False
-		condition_train2 = True#False#epoch > 3000 #True#epoch > 210
-		test_rl = True
+		condition_train2 = True#True#epoch > 3000 #True#epoch > 210
+		test_rl = False#True
 
 		if condition_train1:
 			optimizer = optimizer1
@@ -101,8 +101,8 @@ def train_model(params):
 			if not condition_train1:
 
 				Pid = np.copy(A)
-				action, reward, intersections = model.split(c, x, gt, A, mask, proj_pred, proj_gt, epoch * params.data_size + i, test_rl or condition_train2)
-				print (action[0],reward[0],"Image")
+				action, reward, intersections, pred_genus, gt_genus = model.split(c, x, gt, Pid, mask, proj_pred, proj_gt, epoch * params.data_size + i, test_rl or condition_train2)
+				print (action[0],reward[0],pred_genus[0], gt_genus[0], intersections[0],"Image")
 				A, Pid = model.splitter.forward(Pid,intersections)
 				
 				# Split and send forward
@@ -114,7 +114,7 @@ def train_model(params):
 					total_eloss += model.eloss/len(train_data)
 					total_loss += model.loss/len(train_data)
 
-				color = 'red' if (reward[0]==20) else ('yellow' if reward[0] else 'blue')
+				color = 'red' if (reward[0]==1) else ('yellow' if reward[0] else 'blue')
 				utils.drawPolygons(utils.getPixels(c[0]),utils.getPixels(masked_gt),proj_pred=proj_pred[0], proj_gt=proj_gt[0], color=color,out='results/pred_rl%s.png'%params.sf,A=A[0], line=(action[0][0],action[0][1],action[0][2],action[0][3]))
 				
 			if condition_train1 or condition_train2:
@@ -126,7 +126,7 @@ def train_model(params):
 				masked_gt = gt[0].masked_select(mask[0].unsqueeze(1).repeat(1,dim_size)).reshape(-1, dim_size)
 				utils.drawPolygons(utils.getPixels(c[0]),utils.getPixels(masked_gt),proj_pred=proj_pred[0], proj_gt=proj_gt[0], color='red',out='results/pred_rl%s.png'%params.sf,A=A[0])
 				print("Loss on epoch %i, iteration %i: LR = %f;Losses = T:%f,C:%f,L:%f,N:%f,E:%f" % (epoch, iter_count, optimizer.param_groups[0]['lr'], model.loss, model.closs, model.laploss, model.nloss, model.eloss))
-			# model.save(params.save_model_path)
+			model.save(params.save_model_path)
 			iter_count += params.batch_size
 		end_time = time.time()
 		if condition_train1 or condition_train2:

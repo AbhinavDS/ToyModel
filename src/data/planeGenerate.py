@@ -223,7 +223,7 @@ def dataGenerator(params):
 def drawPolygons(polygons, proj_pred=None, proj_gt=None, color='red',out='out.png',A=None, line=None):
 	black = (0,0,0)
 	white=(255,255,255)
-	im = Image.new('RGB', (600, 600), white)
+	im = Image.new('RGB', (600, 600), black)
 	imPxAccess = im.load()
 	draw = ImageDraw.Draw(im,'RGBA')
 	verts = polygons
@@ -236,7 +236,7 @@ def drawPolygons(polygons, proj_pred=None, proj_gt=None, color='red',out='out.pn
 	for points in polygons:
 		for point in points:
 		    draw.ellipse((point[0] - 4, point[1] - 4, point[0]  + 4, point[1] + 4), fill='green')
-		draw.polygon((points), outline='red',fill=(0,0,0,0))
+		draw.polygon((points), outline='green',fill=(0,0,0,0))
 
 	
 	im.save(out)
