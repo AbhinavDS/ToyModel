@@ -175,7 +175,8 @@ def flatten_pred(c,A,params):
 def flatten_pred_batch(c,A,params):
 	proj_batch = None
 	for i in range(len(c)):
-		proj = flatten_pred(np.array(c[i],dtype=int), A[i], params)
+		proj = flatten_pred(np.array(c[i],dtype=int), A[i], params)		
+		# proj = flatten_pred(np.zeros_like(c[i], dtype=int), A[i], params)
 		proj = np.expand_dims(proj, axis=0)
 		if proj_batch is None:
 			proj_batch = proj

@@ -11,6 +11,7 @@ from src.loss.normal_loss import NormalLoss
 from src.loss.laplacian_loss import LaplacianLoss
 from src.loss.edge_loss import EdgeLoss
 from src.modules.deformer import Deformer
+from src.modules.deformer2 import Deformer2
 from src.modules.vertex_adder import VertexAdder
 from src.modules.vertex_splitter import VertexSplitter
 from src.modules.rl.rl_module import RLModule
@@ -23,9 +24,11 @@ class Model(nn.Module):
 		self.params = params
 		self.deformer = None
 		if torch.cuda.is_available():
-			self.deformer = [Deformer(self.params.feature_size, self.params.dim_size, self.params.depth).cuda() for i in range(1 + self.params.num_blocks1 + self.params.num_blocks2)]
+			self.deformer = [Deformer(self.params.feature_size, self.params.dim_size, self.params.depth).cuda() for i in range(1 + self.params.num_blocks1)]
+			self.deformer += [Deformer2(self.params.feature_size, self.params.dim_size, self.params.depth).cuda() for i in range(self.params.num_blocks2)]
 		else:
-			self.deformer = [Deformer(self.params.feature_size, self.params.dim_size, self.params.depth).cuda() for i in range(1 + self.params.num_blocks1 + self.params.num_blocks2)]
+			self.deformer = [Deformer(self.params.feature_size, self.params.dim_size, self.params.depth).cuda() for i in range(1 + self.params.num_blocks1)]
+			self.deformer += [Deformer2(self.params.feature_size, self.params.dim_size, self.params.depth).cuda() for i in range(self.params.num_blocks2)]
 		
 		self.adder = VertexAdder(params.add_prob).cuda()
 		
@@ -74,12 +77,20 @@ class Model(nn.Module):
 	def load_rl(self, count):
 		self.rl_module.load(count)
 
+	def reinit2(self):
+		print ("REINITIALIZE...")
+		for i in range(self.params.num_blocks1+1, len(self.deformer)):
+			self.deformer[i].reinit()
+
+
 
 	def load(self, path, load_dict=None, count=None):
 		checkpoint = torch.load(path)
 		print ("RESTORING...")
 		model_dict = {}
-		for i in range(len(self.deformer)):
+		# for i in range(len(self.deformer)):
+
+		for i in range(1 + self.params.num_blocks1):
 			model_dict["Deformer_"+str(i)] = self.deformer[i]
 		
 		if load_dict:
@@ -168,7 +179,6 @@ class Model(nn.Module):
 			x, c, A, s = self.adder.forward(x, c, A, s)
 			c_prev = c
 			x, s, c = self.deformer[block].forward(x,s,c_prev,A)
-		
 			norm = c.size(1) * (self.params.num_blocks2)
 			self.laploss += (self.criterionL(c_prev, c, A)/norm)
 			self.closs += (self.criterionC(c, gt, mask)/norm)
@@ -177,7 +187,6 @@ class Model(nn.Module):
 		
 		self.loss = 0
 		self.loss = self.closs + self.params.lambda_n*self.nloss + self.params.lambda_lap*self.laploss + self.params.lambda_e*self.eloss
-			
 		proj_pred = utils.flatten_pred_batch(utils.getPixels(c), A, self.params)
 
 		return x, c, s, A, proj_pred

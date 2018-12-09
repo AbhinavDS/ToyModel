@@ -17,14 +17,20 @@ class VertexSplitter(nn.Module):
 		
 		A = Pid
 		for b in range(batch_size):
+			A[b] = (Pid[b] > 0)
 			edges = intersections[b]
 			if edges is None:
-				A[b] = (Pid[b] > 0)
 				continue
+
 			new_Pid = np.max(Pid[b]) + 1
-			[edge1,edge2] = edges
+			[edge1, edge2] = edges
+			if len(set(edge1).union(set(edge2))) != 4:
+				continue
+			elif (Pid[b][edge1[0],edge2[0]] == 1) or (Pid[b][edge1[1],edge2[1]] == 1):
+				continue
+
 			old_Pid = Pid[b][edge1[0],edge1[1]]
-			
+		
 			#set old edges to 0
 			Pid[b][edge1[0],edge1[1]] = 0
 			Pid[b][edge1[1],edge1[0]] = 0

@@ -109,7 +109,7 @@ class Trainer:
 		# if self.iter % 100 == 0:
 		if self.batch_size > 1:
 			y_1 = y_predicted.data.numpy()[0]
-			r_1 = y_predicted.data.numpy()[0]
+			r_1 = r1.data.numpy()[0]
 		else:
 			y_1 = y_predicted.data.numpy()
 			r_1 = r1.data.numpy()

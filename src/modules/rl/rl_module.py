@@ -30,7 +30,7 @@ class RLModule:
 	def step(self,c, s, gt, A, mask, proj_pred, proj_gt,_ep):
 		s_avg = torch.mean(s, dim=1)
 		state = np.float32(np.concatenate((proj_gt,proj_pred, s_avg.cpu().numpy()),axis=1))
-		for r in range(self.MAX_STEPS):
+		for step in range(self.MAX_STEPS):
 			action = self.trainer.get_exploration_action(state)
 			# if _ep%5 == 0:
 			# 	# validate every 5th episode
@@ -69,8 +69,8 @@ class RLModule:
 		# print(process.memory_info().rss)
 		action = self.trainer.get_exploitation_action(state)
 		reward,intersections = utils.calculate_reward(action,c,A,gt,mask,self.params)
-		# if _ep%200 == 0:
-		# 	self.trainer.save_models((_ep)%10000)
+		if _ep%200 == 0:
+			self.trainer.save_models((_ep)%10000)
 		
 		return (action,reward,intersections)
 

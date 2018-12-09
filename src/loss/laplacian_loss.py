@@ -17,7 +17,6 @@ class LaplacianLoss(nn.Module):
 		
 		lap_pred1 = pred1 - self.centroid(pred1, temp_A)
 		lap_pred2 = pred2 - self.centroid(pred2, temp_A)
-
 		loss = lap_pred2 - lap_pred1
 		loss = torch.mul(loss,loss)
 		loss = torch.sum(loss)
