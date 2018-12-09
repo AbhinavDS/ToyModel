@@ -61,6 +61,37 @@ class OrnsteinUhlenbeckActionNoise:
 		dx = dx + self.sigma * np.random.randn(len(self.X))
 		self.X = self.X + dx
 		return self.X
+def get_intersections(points, c, Pid, params):
+	batch_size = c.size(0)
+	intersections = [None]*batch_size
+	for b in range(batch_size):
+		num_intersections = 0
+		edges = []
+
+		[p1, q1, p2, q2] = points[b].tolist()
+		num_verts = Pid[b].shape[0]
+		for i in range(num_verts):
+			if num_intersections > 2:
+				break
+			for j in range(i,num_verts):
+				if num_intersections > 2:
+					break
+				if Pid[b][i,j]:
+					x1, y1, x2, y2 = c[b,i,0].item(),c[b,i,1].item(),c[b,j,0].item(),c[b,j,1].item()
+					if(intersect(p1,q1,p2,q2,x1,y1,x2,y2)):
+						num_intersections += 1
+						if line(p1,q1,p2,q2,x1,y1) > 0:
+							edges.append([i,j])
+						else:
+							edges.append([j,i])
+		if num_intersections != 2:
+			continue
+		elif Pid[b][edges[0][0],edges[0][1]] != Pid[b][edges[1][0],edges[1][1]]:
+			continue
+		else:
+			intersections[b] = edges
+	return intersections
+
 
 def calculate_reward(points, c, Pid, gt, mask, params, debug = False):
 		#points: batch_size x 4
