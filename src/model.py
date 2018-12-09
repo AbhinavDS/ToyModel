@@ -87,7 +87,8 @@ class Model(nn.Module):
 			load_dict = model_dict
 
 		for key in load_dict:
-			load_dict[key].load_state_dict(checkpoint[key])
+			if key in checkpoint:
+				load_dict[key].load_state_dict(checkpoint[key])
 
 		if count:
 			self.load_rl(count)
