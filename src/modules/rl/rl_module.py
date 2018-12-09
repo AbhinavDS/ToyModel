@@ -27,7 +27,7 @@ class RLModule:
 		#return numpy array
 		return state
 
-	def step(self,c, s, gt, A, mask, proj_pred, proj_gt,_ep):
+	def step(self,c, s, gt, A, mask, proj_pred, proj_gt,_ep, to_split = True):
 		s_avg = torch.mean(s, dim=1)
 		state = np.float32(np.concatenate((proj_gt,proj_pred, s_avg.cpu().numpy()),axis=1))
 		for step in range(self.MAX_STEPS):
@@ -70,7 +70,7 @@ class RLModule:
 		# action = self.trainer.get_exploitation_action(state)
 		action, pred_genus = self.trainer.get_final_action(state)
 		reward, intersections = utils.calculate_reward(action,c,A,gt,mask,self.params)
-		gt_genus = utils.calculate_genus(c, A, gt, mask, self.params)
+		gt_genus = utils.calculate_genus(c, to_split)
 		self.trainer.genus_step(state, gt_genus)
 
 		if _ep%200 == 0:

@@ -62,24 +62,25 @@ class OrnsteinUhlenbeckActionNoise:
 		self.X = self.X + dx
 		return self.X
 
-def calculate_genus(c, Pid, gt, mask, params):
+def calculate_genus(c, to_split):
 	batch_size = c.size(0)
-	split = np.zeros((batch_size,), dtype=np.int)
-	for b in range(batch_size):
-		total_gt = 0
-		masked_gt = gt[b].masked_select(mask[b].unsqueeze(1).repeat(1,params.dim_size)).reshape(-1, params.dim_size)
-		count = 1
-		for i in range(masked_gt.size(0)):
-			if count > 1:
-				break
-			if masked_gt[i,0].item() == -2:
-				count += 1
-			else:
-				if count:
-					count = 0
-					total_gt += 1
-		total_pred = np.max(Pid[b])
-		split[b] = (total_pred < total_gt)
+	split = np.array([to_split]*batch_size)
+	# split = np.zeros((batch_size,), dtype=np.int)
+	# for b in range(batch_size):
+	# 	total_gt = 0
+	# 	masked_gt = gt[b].masked_select(mask[b].unsqueeze(1).repeat(1,params.dim_size)).reshape(-1, params.dim_size)
+	# 	count = 1
+	# 	for i in range(masked_gt.size(0)):
+	# 		if count > 1:
+	# 			break
+	# 		if masked_gt[i,0].item() == -2:
+	# 			count += 1
+	# 		else:
+	# 			if count:
+	# 				count = 0
+	# 				total_gt += 1
+	# 	total_pred = np.max(Pid[b])
+	# 	split[b] = (total_pred < total_gt)
 	return split.astype(np.int)
 	
 

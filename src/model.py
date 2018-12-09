@@ -190,8 +190,8 @@ class Model(nn.Module):
 
 		return x, c, s, A, proj_pred
 
-	def split(self, c, x, gt, A, mask, proj_pred, proj_gt, ep, test):
+	def split(self, c, x, gt, A, mask, proj_pred, proj_gt, ep, test, to_split = True):
 		if test:
 			return self.rl_module.step_test(c, x, gt, A, mask, proj_pred, proj_gt)
 		else:
-			return self.rl_module.step(c, x, gt, A, mask, proj_pred, proj_gt, ep)
+			return self.rl_module.step(c, x, gt, A, mask, proj_pred, proj_gt, ep, to_split)

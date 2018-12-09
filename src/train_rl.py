@@ -98,26 +98,40 @@ def train_model(params):
 			total_loss += model.loss/len(train_data)
 
 			masked_gt = gt[0].masked_select(mask[0].unsqueeze(1).repeat(1,dim_size)).reshape(-1, dim_size)
-			if not condition_train1:
-
-				Pid = np.copy(A)
-				action, reward, intersections, pred_genus, gt_genus = model.split(c, x, gt, Pid, mask, proj_pred, proj_gt, epoch * params.data_size + i, test_rl or condition_train2)
-				print (action[0],reward[0],pred_genus[0], gt_genus[0], intersections[0],"Image")
-				A, Pid = model.splitter.forward(Pid,intersections)
+			Pid = np.copy(A)
+			epoch_set = int(num_epochs/(2*params.num_polygons+1))# 1000
+			epoch_id = epoch/epoch_set
+			if not condition_train1:#[1,2,3,4,5]
+				train_till_block = int((epoch_id+1)/2) # [1,1,2,2,3] when train_till_block trains all split_i <= that also train and train_till_block trains only in even epoch sets
+				for block_i in range(train_till_block):
+					is_last_block = (block_i == int((int(num_epochs/epoch_set) + 1)/2))#3
+					action, reward, intersections, pred_genus, gt_genus = model.split(c, x, gt, Pid, mask, proj_pred, proj_gt, epoch * params.data_size + i, test_rl or  epoch_id%2 == 0, to_split = not is_last_block)
 				
-				# Split and send forward
-				if condition_train2:
+					print (action[0],reward[0],pred_genus[0], gt_genus[0], intersections[0],"Image")
+					A, Pid = model.splitter.forward(Pid,intersections)
+
+					if is_last_block:
+						break
+				
+					# Split and send forward
 					x, c, s, A, proj_pred = model.forward2(x.detach(), c.detach(), s.detach(), A, gt, gtnormals, loss_mask)
 					total_closs += model.closs/len(train_data)
 					total_laploss += model.laploss/len(train_data)
 					total_nloss += model.nloss/len(train_data)
 					total_eloss += model.eloss/len(train_data)
 					total_loss += model.loss/len(train_data)
-
+					if (epoch_id%2 == 0 and block_i <= train_till_block):
+						model.loss.backward(retain_graph = True)
+						model.clear_losses()
+						
+				if epoch_id%2 == 0 and train_till_block < int((int(num_epochs/epoch_set) + 1)/2):#3
+					optimizer.step()
+			
+				
 				color = 'red' if (reward[0]==1) else ('yellow' if reward[0] else 'blue')
 				utils.drawPolygons(utils.getPixels(c[0]),utils.getPixels(masked_gt),proj_pred=proj_pred[0], proj_gt=proj_gt[0], color=color,out='results/pred_rl%s.png'%params.sf,A=A[0], line=(action[0][0],action[0][1],action[0][2],action[0][3]))
 				
-			if condition_train1 or condition_train2:
+			if condition_train1:# or condition_train2:
 				model.loss.backward()
 				optimizer.step()				
 			
