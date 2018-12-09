@@ -9,6 +9,7 @@ import math
 
 from . import utils
 from . import model
+from . import genus
 
 LEARNING_RATE = 1e-4
 GAMMA = 0.99
@@ -42,6 +43,9 @@ class Trainer:
 		self.critic_optimizer = torch.optim.Adam(self.critic.parameters(),LEARNING_RATE)
 		self.critic_step = critic_step
 
+		self.genus = genus.Genus(self.state_dim)
+		self.genus_optimizer = torch.optim.Adam(self.genus.parameters(),LEARNING_RATE)
+		
 		utils.hard_update(self.target_actor, self.actor)
 		utils.hard_update(self.target_critic, self.critic)
 
@@ -54,6 +58,17 @@ class Trainer:
 		state = Variable(torch.from_numpy(state))
 		action = self.target_actor.forward(state).detach()
 		return action.data.numpy()
+
+	def get_final_action(self, state):
+		"""
+		gets the action from target actor added with exploration noise
+		:param state: state (Numpy array)
+		:return: sampled action (Numpy array)
+		"""
+		state = Variable(torch.from_numpy(state))
+		action = self.target_actor.forward(state).detach()
+		genus = torch.argmax(self.genus.forward(state),dim=-1).detach()
+		return action.data.numpy(), genus.data.numpy()
 
 	def get_exploration_action(self, state):
 		"""
@@ -117,6 +132,17 @@ class Trainer:
 			' Loss_critic :- ', loss_critic.data.numpy(), ' Critic Pred Reward :- ', y_1, ' Actual Reward :- ', r_1)
 		self.iter += 1
 
+	
+	def genus_step(self, state, gt_genus):
+		state = Variable(torch.from_numpy(state))
+		gt_genus = torch.from_numpy(gt_genus)
+		gt_genus.requires_grad(False)
+		pred_genus = self.genus.forward(state)
+		loss_genus = nn.NLLLoss(pred_genus, gt_genus)
+		self.genus_optimizer.zero_grad()
+		loss_genus.backward()
+		self.genus_optimizer.step()
+
 	def save_models(self, episode_count):
 		"""
 		saves the target actor and critic models
@@ -125,6 +151,7 @@ class Trainer:
 		"""
 		torch.save(self.target_actor.state_dict(), '/home/abhinavds/Documents/Projects/ToyModel/ckpt/rl/Models/' + str(episode_count) + '_actor.pt')
 		torch.save(self.target_critic.state_dict(), '/home/abhinavds/Documents/Projects/ToyModel/ckpt/rl/Models/' + str(episode_count) + '_critic.pt')
+		torch.save(self.genus.state_dict(), '/home/abhinavds/Documents/Projects/ToyModel/ckpt/rl/Models/' + str(episode_count) + '_genus.pt')
 		print ('Models saved successfully')
 
 	def load_models(self, episode):
@@ -135,6 +162,7 @@ class Trainer:
 		"""
 		self.actor.load_state_dict(torch.load('/home/abhinavds/Documents/Projects/ToyModel/ckpt/rl/Models/' + str(episode) + '_actor.pt'))
 		self.critic.load_state_dict(torch.load('/home/abhinavds/Documents/Projects/ToyModel/ckpt/rl/Models/' + str(episode) + '_critic.pt'))
+		self.genus.load_state_dict(torch.load('/home/abhinavds/Documents/Projects/ToyModel/ckpt/rl/Models/' + str(episode) + '_genus.pt'))
 		utils.hard_update(self.target_actor, self.actor)
 		utils.hard_update(self.target_critic, self.critic)
 		print ('Models loaded succesfully')

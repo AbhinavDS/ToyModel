@@ -5,7 +5,6 @@ from torch.autograd import Variable
 import os
 # import psutil
 import gc
-
 from . import rl_train
 from . import buffer
 from . import utils
@@ -22,6 +21,7 @@ class RLModule:
 
 		self.ram = buffer.MemoryBuffer(self.MAX_BUFFER)
 		self.trainer = rl_train.Trainer(S_DIM, A_DIM, A_MAX, self.ram, params.batch_size, critic_step=3)
+		
 	
 	def get_new_state(self,state):
 		#return numpy array
@@ -40,7 +40,7 @@ class RLModule:
 			# 	action = trainer.get_exploration_action(state)
 
 			#new_observation, reward, done, info = env.step(action)
-			reward,_ = utils.calculate_reward(action,c,A,gt,mask,self.params)
+			reward, _, _ = utils.calculate_reward(action,c,A,gt,mask,self.params)
 			new_state = self.get_new_state(state)#expects numpy array
 			
 			# # dont update if this is validation
@@ -68,7 +68,9 @@ class RLModule:
 		# process = psutil.Process(os.getpid())
 		# print(process.memory_info().rss)
 		action = self.trainer.get_exploitation_action(state)
-		reward,intersections = utils.calculate_reward(action,c,A,gt,mask,self.params)
+		reward, intersections, gt_genus = utils.calculate_reward(action,c,A,gt,mask,self.params)
+		trainer.genus_step(state, gt_genus)
+
 		if _ep%200 == 0:
 			self.trainer.save_models((_ep)%10000)
 		
@@ -83,10 +85,13 @@ class RLModule:
 		state = np.float32(np.concatenate((proj_gt,proj_pred, s_avg.cpu().numpy()),axis=1))
 		gc.collect()
 		action = self.trainer.get_exploitation_action(state)
-		reward,intersections  = utils.calculate_reward(action,c,A,gt,mask,self.params)
+		reward, intersections, _  = utils.calculate_reward(action,c,A,gt,mask,self.params)
 		return (action,reward,intersections)
 
 	def load(self, count):
 		self.trainer.load_models(count)
 
 
+	def genus_step(self, state, gt_genus):
+		state = Variable(torch.from_numpy(state))
+		gt_genus = Variable(torch.from_numpy(gt_genus))
