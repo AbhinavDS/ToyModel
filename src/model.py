@@ -12,6 +12,7 @@ from src.loss.laplacian_loss import LaplacianLoss
 from src.loss.edge_loss import EdgeLoss
 from src.modules.deformer import Deformer
 from src.modules.vertex_adder import VertexAdder
+from src.modules.vertex_splitter import VertexSplitter
 from src.modules.rl.rl_module import RLModule
 
 from  src import dtype, dtypeL, dtypeB
@@ -27,7 +28,9 @@ class Model(nn.Module):
 			self.deformer = [Deformer(self.params.feature_size, self.params.dim_size, self.params.depth).cuda() for i in range(self.params.num_blocks + 1)]
 		
 		self.adder = VertexAdder(params.add_prob).cuda()
-	
+		
+		self.splitter = VertexSplitter().cuda()
+
 		self.criterionC = ChamferLoss()
 		self.criterionN = NormalLoss()
 		self.criterionL = LaplacianLoss()
