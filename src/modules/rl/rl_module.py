@@ -29,7 +29,7 @@ class RLModule:
 
 	def step(self,c, s, gt, A, mask, proj_pred, proj_gt,_ep, to_split = True):
 		s_avg = torch.mean(s, dim=1)
-		state = np.float32(np.concatenate((proj_gt,proj_pred, s_avg.cpu().numpy()),axis=1))
+		state = np.float32(np.concatenate((proj_gt,proj_pred, s_avg.cpu().detach().numpy()),axis=1))
 		for step in range(self.MAX_STEPS):
 			action = self.trainer.get_exploration_action(state)
 			# if _ep%5 == 0:

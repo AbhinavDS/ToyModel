@@ -13,7 +13,7 @@ from . import genus
 
 LEARNING_RATE = 1e-4
 GAMMA = 0.99
-TAU = 0.01
+TAU = 0.05
 
 
 class Trainer:

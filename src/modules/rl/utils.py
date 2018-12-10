@@ -142,12 +142,7 @@ def calculate_reward(points, c, Pid, gt, mask, params, debug = False):
 			right = np.max(all_points, axis=0) + 0.1
 			# if p1 >= left[0] and p2 >= left[0] and p1 <= right[0] and p2 <= right[0] and q1 >= left[1] and q2 >= left[1] and q1 <= right[1] and q2 <= right[1]:
 			# print(left,right,p1,p2,q1,q2)
-			if p1 >= left[0] and p2 >= left[0] and p1 <= right[0] and p2 <= right[0]:
 			
-				reward[b] += 5
-			
-			if reward[b] == 0:
-				continue
 
 
 			for i in range(num_verts):
@@ -174,6 +169,12 @@ def calculate_reward(points, c, Pid, gt, mask, params, debug = False):
 				intersections[b] = edges
 				reward[b] += 5; 
 				#continue
+
+				if p1 >= left[0] and p2 >= left[0] and p1 <= right[0] and p2 <= right[0]:		
+					reward[b] += 5
+				else:
+					reward[b] =0
+					continue
 
 				masked_gt = gt[b].masked_select(mask[b].unsqueeze(1).repeat(1,params.dim_size)).reshape(-1, params.dim_size)
 				pos = 0

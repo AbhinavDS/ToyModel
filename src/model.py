@@ -57,7 +57,7 @@ class Model(nn.Module):
 		for i in range(len(self.deformer)):
 			self.deformer1_dict["Deformer_"+str(i)] = self.deformer[i]
 
-		self.rl_module = RLModule(params)
+		self.rl_module = [RLModule(params), RLModule(params), RLModule(params)]
 		self.unfreezed = True
 
 		if params.load_model_path:
@@ -104,7 +104,8 @@ class Model(nn.Module):
 				load_dict[key].load_state_dict(checkpoint[key])
 
 		if count:
-			self.load_rl(count)
+			pass
+			# self.load_rl(count)
 
 	def save(self, path, save_dict=None):
 		model_dict = {}
@@ -138,11 +139,12 @@ class Model(nn.Module):
 		self.nloss = 0.0
 		self.eloss = 0.0
 
-	def forward1(self, x, c, s, A, gt, gtnormals, mask):
+	def forward1(self, x, c, s, A, Pid, gt, gtnormals, mask):
 		self.clear_losses()
 		# Vertex addition
 		for block in range(self.params.num_blocks1-self.params.start_block):
-			x, c, A, s = self.adder.forward(x, c, A, s)
+			x, c, A, Pid, s = self.adder.forward(x, c, A, Pid, s)
+			
 		
 		x = self.deformer[0].embed(c)
 		c_prev = c
@@ -156,7 +158,7 @@ class Model(nn.Module):
 
 		for block in range(1, self.params.num_blocks1+1):
 			if block < self.params.start_block:
-				x, c, A, s = self.adder.forward(x, c, A, s)
+				x, c, A, Pid, s = self.adder.forward(x, c, A, Pid, s)
 			c_prev = c
 			x, s, c = self.deformer[block].forward(x,s,c_prev,A)
 		
@@ -170,12 +172,12 @@ class Model(nn.Module):
 			
 		proj_pred = utils.flatten_pred_batch(utils.getPixels(c), A, self.params)
 
-		return x, c, s, A, proj_pred
+		return x, c, s, A, Pid, proj_pred
 
-	def forward2(self, x, c, s, A, gt, gtnormals, mask):
+	def forward2(self, x, c, s, A, Pid, gt, gtnormals, mask):
 		self.clear_losses()		
 		for block in range(self.params.num_blocks1 + 1, len(self.deformer)):
-			x, c, A, s = self.adder.forward(x, c, A, s)
+			x, c, A, Pid, s = self.adder.forward(x, c, A, Pid, s)
 			c_prev = c
 			x, s, c = self.deformer[block].forward(x,s,c_prev,A)
 			norm = c.size(1) * (self.params.num_blocks2)
@@ -183,15 +185,15 @@ class Model(nn.Module):
 			self.closs += (self.criterionC(c, gt, mask)/norm)
 			self.eloss += (self.criterionE(c, A)/norm)
 			self.nloss += (self.criterionN(c, gt, gtnormals, A, mask)/norm)
-		
 		self.loss = 0
 		self.loss = self.closs + self.params.lambda_n*self.nloss + self.params.lambda_lap*self.laploss + self.params.lambda_e*self.eloss
 		proj_pred = utils.flatten_pred_batch(utils.getPixels(c), A, self.params)
 
-		return x, c, s, A, proj_pred
+		return x, c, s, A, Pid, proj_pred
 
-	def split(self, c, x, gt, A, mask, proj_pred, proj_gt, ep, test, to_split = True):
+	def split(self, c, x, gt, A, mask, proj_pred, proj_gt, ep, test, block, to_split = True):
 		if test:
-			return self.rl_module.step_test(c, x, gt, A, mask, proj_pred, proj_gt)
+			return self.rl_module[block].step_test(c, x, gt, A, mask, proj_pred, proj_gt)
 		else:
-			return self.rl_module.step(c, x, gt, A, mask, proj_pred, proj_gt, ep, to_split)
+			self.rl_module[block].step(c, x, gt, A, mask, proj_pred, proj_gt, ep, to_split)
+			return self.rl_module[block].step(c, x, gt, A, mask, proj_pred, proj_gt, ep, to_split)

@@ -9,7 +9,7 @@ class VertexAdder(nn.Module):
 		super(VertexAdder, self).__init__()
 		self.toss = toss
 
-	def forward(self, x_prev, c_prev, A, s_prev):
+	def forward(self, x_prev, c_prev, A, Pid, s_prev):
 		# dim A: batch_size x verices x verices
 		batch_size = A.shape[0]
 		feature_size = x_prev.size(2)
@@ -21,6 +21,7 @@ class VertexAdder(nn.Module):
 		num_vertices = int(num_vertices[0])
 		final_num_vertices = int(final_num_vertices[0])
 		A_new = np.zeros((batch_size, final_num_vertices, final_num_vertices))
+		Pid_new = np.zeros((batch_size, final_num_vertices, final_num_vertices))
 
 		#v_index: batch_size
 		v_index = np.ones(batch_size,dtype=np.int)*num_vertices#first new vertex added here
@@ -31,6 +32,9 @@ class VertexAdder(nn.Module):
 		s_new =  torch.cat((s_prev,torch.zeros(batch_size,final_num_vertices-num_vertices,feature_size).type(dtype)),dim=1)
 		for i in range(num_vertices):
 			# k = i+1
+			polygon_i = np.max(Pid[:,:,i], axis=-1)
+			polygon_i = np.expand_dims(polygon_i, 1)
+
 			for j in range(i+1, num_vertices):				
 				# toss = np.random.uniform()
 				# if toss < self.toss:
@@ -38,9 +42,10 @@ class VertexAdder(nn.Module):
 				# k += 1
 			
 				mask = np.expand_dims(A[:,i,j],1)
+				pmask = polygon_i * mask
 				#mask: batch_size
 				temp_A_new = np.zeros((batch_size, final_num_vertices, final_num_vertices))
-
+				
 				#add vertex between them
 				np.put_along_axis(temp_A_new[:,i,:], v_index, mask, axis=1)
 				np.put_along_axis(temp_A_new[:,:,i], v_index, mask, axis=1)
@@ -48,6 +53,17 @@ class VertexAdder(nn.Module):
 				np.put_along_axis(temp_A_new[:,j,:], v_index, mask, axis=1)
 
 				A_new += temp_A_new
+
+
+				# Do same for Pid
+				temp_Pid_new = np.zeros((batch_size, final_num_vertices, final_num_vertices))
+				
+				np.put_along_axis(temp_Pid_new[:,i,:], v_index, pmask, axis=1)
+				np.put_along_axis(temp_Pid_new[:,:,i], v_index, pmask, axis=1)
+				np.put_along_axis(temp_Pid_new[:,:,j], v_index, pmask, axis=1)
+				np.put_along_axis(temp_Pid_new[:,j,:], v_index, pmask, axis=1)
+
+				Pid_new += temp_Pid_new
 
 				#x_new : batch x final_num_vert x feat
 				tmask = torch.LongTensor(mask).type(dtype)
@@ -64,5 +80,5 @@ class VertexAdder(nn.Module):
 				s_new.scatter_add_(1,tv_index.repeat(1, 1, feature_size), s_v)
 				v_index += mask.astype(int)
 				v_index = v_index % final_num_vertices
-		return x_new, c_new, A_new, s_new
+		return x_new, c_new, A_new, Pid_new, s_new
 
