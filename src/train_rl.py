@@ -123,6 +123,8 @@ def train_model(params):
 						print (action[0],reward[0],pred_genus[0], gt_genus[0], intersections[0],"Image")
 						A, Pid = model.splitter_block.forward(Pid,intersections)
 					else:
+						print ("Going in Block: ",block_id)
+						assert (not torch.isnan(c).any())
 						x, c, s, A, Pid,  proj_pred = model.deformer_block2.forward(x.detach(), c.detach(), s.detach(), A, Pid, gt, gtnormals, loss_mask)
 						total_closs += model.deformer_block2.closs.item()/norm
 						total_laploss += model.deformer_block2.laploss.item()/norm

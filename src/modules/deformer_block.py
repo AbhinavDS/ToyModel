@@ -54,16 +54,21 @@ class DeformerBlock(nn.Module):
 			x = self.deformer_block[0].embed(c)
 
 		for gcn in range(self.num_gcns):
+			print ("GCN1: ",gcn)
+			assert (not torch.isnan(c).any())
 			if gcn + self.initial_adders < self.num_gcns:
 				x, c, A, Pid, s = self.adder.forward(x, c, A, Pid, s)
-			c_prev = c
+				print ("ADDERS")
+				assert (not torch.isnan(c).any())
+			c_prev = c#.data.clone();
 			x, s, c = self.deformer_block[gcn].forward(x,s,c_prev,A)
-			norm = 1#c.size(1) * (self.num_gcns)
+			norm = c.size(1) * (self.num_gcns)
+			print ("GCN2: ",gcn)
+			assert (not torch.isnan(c).any())
 			self.laploss += (self.criterionL(c_prev, c, A)/norm)
 			self.closs += (self.criterionC(c, gt, mask)/norm)
 			self.eloss += (self.criterionE(c, A)/norm)
 			self.nloss += (self.criterionN(c, gt, gtnormals, A, mask)/norm)
 		self.loss = self.closs + self.params.lambda_n*self.nloss + self.params.lambda_lap*self.laploss + self.params.lambda_e*self.eloss
-		print (c, self.laploss)
 		proj_pred = utils.flatten_pred_batch(utils.getPixels(c), A, self.params)
 		return x, c, s, A, Pid, proj_pred

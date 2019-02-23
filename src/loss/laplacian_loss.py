@@ -36,5 +36,7 @@ class LaplacianLoss(nn.Module):
 		neighbours = torch.sum(neighbours, dim = 3)
 		neighbours = neighbours.permute(0,2,1)
 		num_neighbours = num_neighbours.unsqueeze(2).repeat(1,1,2)
+		# print ("NN ",num_neighbours)
 		neighbours = torch.div(neighbours, num_neighbours)
+		assert (not torch.isnan(neighbours).any())
 		return neighbours
