@@ -14,7 +14,8 @@ class VertexSplitter(nn.Module):
 		# returns A and Pid given a Pid
 		batch_size = Pid.shape[0]
 		num_verts = Pid.shape[1]
-		
+		print ("Start")
+		print (Pid, "I", intersections)
 		A = np.copy(Pid)
 		for b in range(batch_size):
 			A[b] = (Pid[b] > 0)
@@ -26,7 +27,7 @@ class VertexSplitter(nn.Module):
 			[edge1, edge2] = edges
 			if len(set(edge1).union(set(edge2))) != 4:
 				continue
-			elif (Pid[b][edge1[0],edge2[0]] == 1) or (Pid[b][edge1[1],edge2[1]] == 1):
+			elif (Pid[b][edge1[0],edge2[0]] == 1) or (Pid[b][edge1[0],edge2[1]] == 1) or (Pid[b][edge1[1],edge2[0]] == 1) or (Pid[b][edge1[1],edge2[1]] == 1):
 				continue
 
 			old_Pid = Pid[b][edge1[0],edge1[1]]

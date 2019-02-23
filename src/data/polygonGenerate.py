@@ -146,6 +146,8 @@ def dataGenerator(params):
 	if params.mirrored:
 		data_size = int(math.ceil(data_size/2))
 	filepath  = "../../data/1" if total_polygons==1 else "../../data/2"
+	if not os.path.exists(filepath):
+		os.makedirs(filepath)
 	f = open(os.path.join(filepath,'polygons_%s.dat'%suffix),'w')
 	f_normal = open(os.path.join(filepath,'normals_%s.dat'%suffix),'w')
 	num_polygons = total_polygons
@@ -154,12 +156,12 @@ def dataGenerator(params):
 	for i in range(data_size):
 		if params.random_num_polygons:
 			num_polygons = np.random.randint(1,total_polygons)
-		aveRadius = abs(50*np.random.randn())
+		#aveRadius = abs(50*np.random.randn())
 		centers = []
 		radii = []
 		polygons = []
 		for p in range(num_polygons):
-			radius = 40 + 10*np.random.rand()
+			radius = 30 + 10*np.random.rand()
 			overlap = True
 			while(overlap):
 				c_x = 1.5*radius + (500-1.5*radius)*np.random.rand()

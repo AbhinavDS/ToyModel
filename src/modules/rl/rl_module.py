@@ -10,10 +10,13 @@ from . import buffer
 from . import utils
 
 class RLModule:
-	def __init__(self, params):
+	def __init__(self, params, prefix):
 		self.MAX_STEPS = 1#000
 		self.MAX_BUFFER = 1000000
 		self.params = params
+		self.prefix = "" if prefix == "" else prefix+"_"
+		self.path = os.path.join(self.params.save_model_dirpath, "rl")
+		self.path = os.path.join(self.path, self.prefix)
 
 		S_DIM = 2*params.img_width + params.feature_size
 		A_DIM = 4
@@ -74,7 +77,7 @@ class RLModule:
 		self.trainer.genus_step(state, gt_genus)
 
 		if _ep%200 == 0:
-			self.trainer.save_models((_ep)%10000)
+			self.trainer.save_models((_ep)%10000, path=self.path)
 		
 		return (action,reward,intersections, pred_genus, gt_genus)
 
@@ -90,8 +93,8 @@ class RLModule:
 		intersections  = utils.get_intersections(action, c, A, self.params)
 		return (action, genus, intersections, genus, genus)
 
-	def load(self, count):
-		self.trainer.load_models(count)
+	def load(self,count):
+		self.trainer.load_models(count, path=self.path)
 
 
 	def genus_step(self, state, gt_genus):

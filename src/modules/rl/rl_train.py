@@ -144,26 +144,26 @@ class Trainer:
 		loss_genus.backward()
 		self.genus_optimizer.step()
 
-	def save_models(self, episode_count):
+	def save_models(self, episode_count, path=''):
 		"""
 		saves the target actor and critic models
 		:param episode_count: the count of episodes iterated
 		:return:
 		"""
-		torch.save(self.target_actor.state_dict(), '/home/abhinavds/Documents/Projects/ToyModel/ckpt/rl/Models_genus/' + str(episode_count) + '_actor.pt')
-		torch.save(self.target_critic.state_dict(), '/home/abhinavds/Documents/Projects/ToyModel/ckpt/rl/Models_genus/' + str(episode_count) + '_critic.pt')
-		torch.save(self.genus.state_dict(), '/home/abhinavds/Documents/Projects/ToyModel/ckpt/rl/Models_genus/' + str(episode_count) + '_genus.pt')
+		torch.save(self.target_actor.state_dict(), path + str(episode_count) + '_actor.pt')
+		torch.save(self.target_critic.state_dict(), path + str(episode_count) + '_critic.pt')
+		torch.save(self.genus.state_dict(), path + str(episode_count) + '_genus.pt')
 		print ('Models saved successfully')
 
-	def load_models(self, episode):
+	def load_models(self, episode,path=''):
 		"""
 		loads the target actor and critic models, and copies them onto actor and critic models
 		:param episode: the count of episodes iterated (used to find the file name)
 		:return:
 		"""
-		self.actor.load_state_dict(torch.load('/home/abhinavds/Documents/Projects/ToyModel/ckpt/rl/Models_genus/' + str(episode) + '_actor.pt'))
-		self.critic.load_state_dict(torch.load('/home/abhinavds/Documents/Projects/ToyModel/ckpt/rl/Models_genus/' + str(episode) + '_critic.pt'))
-		self.genus.load_state_dict(torch.load('/home/abhinavds/Documents/Projects/ToyModel/ckpt/rl/Models_genus/' + str(episode) + '_genus.pt'))
+		self.actor.load_state_dict(torch.load(path + str(episode) + '_actor.pt'))
+		self.critic.load_state_dict(torch.load(path + str(episode) + '_critic.pt'))
+		self.genus.load_state_dict(torch.load(path + str(episode) + '_genus.pt'))
 		utils.hard_update(self.target_actor, self.actor)
 		utils.hard_update(self.target_critic, self.critic)
 		print ('Models loaded succesfully')
