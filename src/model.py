@@ -38,9 +38,11 @@ class Model():
 			self.deformer_block_dict["Deformer2_"+str(i)] = self.deformer_block2[i]
 
 		self.rl_module = [RLModule(params, str(i)) for i in range(self.params.num_rl)]
+		self.last_epoch = 0
 		if load_models:
 			self.load(os.path.join(params.load_model_dirpath,'model.toy'))
-			self.load_rl(params.load_rl_count)
+			self.load_rl(self.params.load_rl_count)
+		
 
 	def load_rl(self, count):
 		for i in range(len(self.rl_module)):
@@ -52,12 +54,14 @@ class Model():
 		print ("RESTORING...")
 		for key in self.deformer_block_dict.keys():
 			self.deformer_block_dict[key].load_state_dict(checkpoint[key])
+		self.last_epoch = checkpoint["last_epoch"]
 		
-	def save(self, path):
+	def save(self, path, epoch):
 		checkpoint = {}
 		print ("SAVING...")
 		for key in self.deformer_block_dict.keys():
 			checkpoint[key] = self.deformer_block_dict[key].state_dict()
+		checkpoint["last_epoch"] = epoch
 		torch.save(checkpoint, path)
 
 	def create_start_data(self):

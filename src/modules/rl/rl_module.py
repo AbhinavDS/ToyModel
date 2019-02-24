@@ -79,7 +79,7 @@ class RLModule:
 		self.trainer.genus_step(state, gt_genus)
 
 		if self._ep%200 == 0:
-			self.ep = self._ep%1000
+			self._ep = self._ep % 1000
 			self.trainer.save_models(self._ep, path=self.path)
 		
 		return (action,reward,intersections, pred_genus, gt_genus)
