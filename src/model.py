@@ -45,12 +45,13 @@ class Model():
 	def load_rl(self, count):
 		for i in range(len(self.rl_module)):
 			self.rl_module[i].load(count)
+			self.rl_module[i]._ep = count
 
 	def load(self, path):
 		checkpoint = torch.load(path)
 		print ("RESTORING...")
 		for key in self.deformer_block_dict.keys():
-			deformer_block_dict[key].load_state_dict(checkpoint[key])
+			self.deformer_block_dict[key].load_state_dict(checkpoint[key])
 		
 	def save(self, path):
 		checkpoint = {}
@@ -71,9 +72,9 @@ class Model():
 		c = torch.Tensor(c).type(dtype)
 		return x, c, A
 
-	def split(self, c, x, gt, A, mask, proj_pred, proj_gt, ep, test, block, to_split = True):
+	def split(self, c, x, gt, A, mask, proj_pred, proj_gt, test, block, to_split = True):
 		if test:
 			return self.rl_module[block].step_test(c, x, gt, A, mask, proj_pred, proj_gt)
 		else:
-			self.rl_module[block].step(c, x, gt, A, mask, proj_pred, proj_gt, ep, to_split)
-			return self.rl_module[block].step(c, x, gt, A, mask, proj_pred, proj_gt, ep, to_split)
+			self.rl_module[block].step(c, x, gt, A, mask, proj_pred, proj_gt, to_split)
+			return self.rl_module[block].step(c, x, gt, A, mask, proj_pred, proj_gt, to_split)
