@@ -7,6 +7,7 @@ import random
 import math
 from src.data import dataLoader
 from src.util import utils
+from src.modules.convolution_block import ConvolutionBlock
 from src.modules.deformer_block import DeformerBlock
 from src.modules.vertex_splitter import VertexSplitter
 from src.modules.rl.rl_module import RLModule
@@ -17,6 +18,7 @@ class Model():
 	def __init__(self, params, load_models=False):
 		super(Model, self).__init__()
 		self.params = params
+		self.convolution_block = ConvolutionBlock(self.params, normalize=True)
 		self.deformer_block1 = DeformerBlock(self.params, self.params.num_gcns1, self.params.initial_adders, True, weights_init='xavier')
 		self.deformer_block2 = DeformerBlock(self.params, self.params.num_gcns2, 0, False, residual_change=True)
 

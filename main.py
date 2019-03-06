@@ -28,7 +28,7 @@ def parseArgs():
     parser.add_argument('--img_height', type=int, default=600, help='See variable name')
     parser.add_argument('-t','--test', dest='test', default = False, action='store_true',help='See variable name')
     parser.add_argument('--add_prob', type=float, default=0.5, help='See variable name')
-    parser.add_argument('--num_polygons', type=int, default=3, help='See variable name')
+    parser.add_argument('--num_polygons', type=int, default=2, help='See variable name')
     parser.add_argument('-i','--iters_per_block', type=int, default=100, help='See variable name')
     parser.add_argument('--load_rl_count', type=int, default=200, help='See variable name')
     args = parser.parse_args()

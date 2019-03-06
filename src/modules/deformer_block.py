@@ -21,7 +21,7 @@ class DeformerBlock(nn.Module):
 		self.embed = embed
 		assert (self.num_gcns > 0, "Number of gcns is 0")
 		
-		self.deformer_block = [GCN(self.params.feature_size, self.params.dim_size, self.params.depth, weights_init=weights_init, residual_change=residual_change).cuda() for _ in range(self.num_gcns)]
+		self.deformer_block = [GCN(self.params.feature_size, self.params.image_feature_size, self.params.dim_size, self.params.depth, weights_init=weights_init, residual_change=residual_change).cuda() for _ in range(self.num_gcns)]
 		self.adder = VertexAdder(params.add_prob).cuda()
 
 		self.criterionC = ChamferLoss()
@@ -43,22 +43,22 @@ class DeformerBlock(nn.Module):
 		self.nloss = 0.0
 		self.eloss = 0.0
 
-	def forward(self, x, c, s, A, Pid, gt, gtnormals, mask):
+	def forward(self, x, c, A, Pid, gt, gtnormals, mask, image_feats):
 		self.set_loss_to_zero()
 		total_blocks = self.initial_adders + self.num_gcns
 
 		for _ in range(self.initial_adders):
-			x, c, A, Pid, s = self.adder.forward(x, c, A, Pid, s)
+			x, c, A, Pid = self.adder.forward(x, c, A, Pid)
 		
 		if self.embed:
 			x = self.deformer_block[0].embed(c)
 
 		for gcn in range(self.num_gcns):
 			if gcn + self.initial_adders < self.num_gcns:
-				x, c, A, Pid, s = self.adder.forward(x, c, A, Pid, s)
+				x, c, A, Pid = self.adder.forward(x, c, A, Pid)
 
 			c_prev = c
-			x, s, c = self.deformer_block[gcn].forward(x,s,c_prev,A)
+			x, c = self.deformer_block[gcn].forward(x, c_prev, A, image_feats)
 			norm = c.size(1) * (self.num_gcns)
 			self.laploss += (self.criterionL(c_prev, c, A)/norm)
 			self.closs += (self.criterionC(c, gt, mask)/norm)
@@ -66,4 +66,4 @@ class DeformerBlock(nn.Module):
 			self.nloss += (self.criterionN(c, gt, gtnormals, A, mask)/norm)
 		self.loss = self.closs + self.params.lambda_n*self.nloss + self.params.lambda_lap*self.laploss + self.params.lambda_e*self.eloss
 		proj_pred = utils.flatten_pred_batch(utils.getPixels(c), A, self.params)
-		return x, c, s, A, Pid, proj_pred
+		return x, c, A, Pid, proj_pred

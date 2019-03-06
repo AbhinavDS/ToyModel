@@ -20,9 +20,10 @@ def train_model(params):
 	
 	params.save_model_dirpath = os.path.join(params.save_model_dirpath, params.sf)
 	load_models = (os.path.realpath(params.load_model_dirpath) == os.path.realpath(params.save_model_dirpath))
-	if not os.path.exists(params.save_model_dirpath):
+	if not os.path.isdir(params.save_model_dirpath):
 		os.makedirs(params.save_model_dirpath)
 		os.makedirs(os.path.join(params.save_model_dirpath,'rl'))
+		load_models = False
 	elif not load_models:
 		print (params.save_model_dirpath+" already exists. Overwrite not possible.")
 		return
@@ -32,11 +33,12 @@ def train_model(params):
 	params.max_vertices = max_vertices
 	params.data_size = data_size
 	params.feature_size = feature_size
+	params.image_feature_size = 1280 #filters of conv_3_3 + conv_4_3 + conv_5_3
 	params.initial_adders = 2
 	print("Num GCNs: " + str(num_gcns))
 	
 	iter_count = 0
-	model = Model(params, load_models)
+	model = Model(params, load_models=load_models)
 	params.start_epoch = model.last_epoch
 	optimizer1 = optim.Adam(model.optimizer_params1, lr=params.lr)
 	scheduler1 = optim.lr_scheduler.StepLR(optimizer1, step_size = params.step_size, gamma=params.gamma)
@@ -74,19 +76,19 @@ def train_model(params):
 			#################
 
 			# Iterator
-			train_data, train_data_normal, seq_len, proj_gt = next(train_data_loader)
+			train_data, train_data_normal, seq_len, proj_gt, train_data_images = next(train_data_loader)
 
 			# Input 
 			gt = torch.Tensor(utils.reshapeGT(params,train_data)).type(dtype) #vertices x dim_size
 			gtnormals = torch.Tensor(utils.reshapeGT(params,train_data_normal)).type(dtype) #vertices x dim_size
+			gt_images = torch.Tensor(train_data_images).type(dtype)
+			image_feats = model.convolution_block.forward(gt_images)
 
 			# Masks for batch size
 			mask = utils.create_mask(gt, seq_len)
 			mask = torch.Tensor(mask).type(dtypeB)
 			loss_mask = utils.create_loss_mask(gt) # also masks extra padded -2 between polygons for loss calculation
 			loss_mask = torch.Tensor(loss_mask).type(dtypeB)
-
-			s = torch.Tensor(train_data).type(dtype).unsqueeze(1).repeat(1,3,1)
 
 			gt.requires_grad = False
 			gtnormals.requires_grad = False
@@ -97,7 +99,7 @@ def train_model(params):
 			Pid = np.copy(A)
 
 			# Start Processing
-			x, c, s, A, Pid, proj_pred = model.deformer_block1.forward(x, c, s, A, Pid, gt, gtnormals, loss_mask)
+			x, c, A, Pid, proj_pred = model.deformer_block1.forward(x, c, A, Pid, gt, gtnormals, loss_mask, image_feats)
 
 			norm = len(train_data) * (int((block_id)/2)+1)
 			total_closs += model.deformer_block1.closs.item()/norm
@@ -125,7 +127,7 @@ def train_model(params):
 						print (action[0],reward[0],pred_genus[0], gt_genus[0], intersections[0],"Image")
 						A, Pid = model.splitter_block.forward(Pid,intersections)
 					else:
-						x, c, s, A, Pid,  proj_pred = model.deformer_block2.forward(x.detach(), c.detach(), s.detach(), A, Pid, gt, gtnormals, loss_mask)
+						x, c, A, Pid,  proj_pred = model.deformer_block2.forward(x.detach(), c.detach(), A, Pid, gt, gtnormals, loss_mask, image_feats)
 						total_closs += model.deformer_block2.closs.item()/norm
 						total_laploss += model.deformer_block2.laploss.item()/norm
 						total_nloss += model.deformer_block2.nloss.item()/norm

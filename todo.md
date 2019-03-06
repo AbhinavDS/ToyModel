@@ -36,6 +36,10 @@ PUT CORRECT MODEL IN RL
 ###
 WRITE SPLIT AND FURTHER DEFORM
 
+### 
+s = torch.Tensor(train_data).type(dtype).unsqueeze(1).repeat(1,3,1)
+
+
 # Current command
 python3 main.py  --batch_size 100 -n 2000 -d 3 --data_dir data/2_1000 -s ckpt/model_2_1000.toy -sf 10000
 

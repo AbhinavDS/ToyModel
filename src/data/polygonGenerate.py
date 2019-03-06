@@ -153,10 +153,13 @@ def dataGenerator(params):
 		os.makedirs(filepath)
 	f = open(os.path.join(filepath,'polygons_%s.dat'%suffix),'w')
 	f_normal = open(os.path.join(filepath,'normals_%s.dat'%suffix),'w')
+	f_image_dir = os.path.join(filepath, "images_%s"%suffix)
+	if not os.path.isdir(f_image_dir):
+		os.makedirs(f_image_dir)
 	num_polygons = total_polygons
 	max_verts = 0
-
-	for i in range(data_size):
+	image_count = 0
+	for data_i in range(data_size):
 		if params.random_num_polygons:
 			num_polygons = np.random.randint(1,total_polygons)
 		#aveRadius = abs(50*np.random.randn())
@@ -194,13 +197,15 @@ def dataGenerator(params):
 		# polygons.append(new_polygon)
 		writePolygons(f, polygons, pad_token)
 		allnormals = writeNormals(f_normal, polygons, pad_token)
-		# drawPolygons(polygons)#,normals = allnormals)
+		image_count += 1
+		saveImage(polygons, out=os.path.join(f_image_dir,'%s.png'%str(image_count).zfill(6)))
 
 		if params.mirrored:
 			polygons = getMirror(polygons)
 			writePolygons(f, polygons, pad_token)
 			allnormals = writeNormals(f_normal, polygons, pad_token)
-		drawPolygons(polygons)#,normals = allnormals)
+			image_count += 1
+			saveImage(polygons, out=os.path.join(f_image_dir,'%s.png'%str(image_count).zfill(6)))
 		#w = input("we")
 	f.close()
 	f_normal.close()
@@ -223,9 +228,22 @@ def drawPolygons(polygonsgt, proj_pred=None, proj_gt=None, color='red',out='out.
 	for points in polygonsgt:
 		for point in points:
 		    draw.ellipse((point[0] - 4, point[1] - 4, point[0]  + 4, point[1] + 4), fill='green')
-		draw.polygon((points), outline='green',fill=(0,0,0,0))
+		draw.polygon((points), outline='green',fill=(0,0,0,0))	
+	im.save(out)
 
-	
+def saveImage(polygonsgt, proj_pred=None, proj_gt=None, color='red',out='out.png',A=None, line=None):
+	black = (0,0,0)
+	white=(255,255,255)
+	im = Image.new('RGB', (600, 600), white)
+	imPxAccess = im.load()
+	draw = ImageDraw.Draw(im,'RGBA')
+	vertsgt = polygonsgt
+	# either use .polygon(), if you want to fill the area with a solid colour
+	verts = vertsgt
+	points = tuple(tuple(x) for x in verts)
+	i = 0
+	for points in polygonsgt:
+		draw.polygon((points), outline='green',fill='green')	
 	im.save(out)
 
 if __name__ == '__main__':

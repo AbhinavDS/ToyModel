@@ -1,6 +1,8 @@
 import torch
 import numpy as np
 import os
+from PIL import Image
+
 from src.util import utils
 
 PAD_TOKEN = -2
@@ -24,20 +26,24 @@ def getMetaData(params):
 def getDataLoader(params):
 	f_polygons_path = os.path.join(params.data_dir,'polygons_%s.dat'%params.suffix)
 	f_normals_path = os.path.join(params.data_dir,'normals_%s.dat'%params.suffix)
+	f_image_dir_path = os.path.join(params.data_dir,'images_%s'%params.suffix)
 	max_vertices, feature_size, _ = getMetaData(params)
 	iter_count = 0
 	polygons_data = np.array([])
 	normals_data = np.array([])
 	proj_data = np.array([])
 	seq_len = np.array([])
+	image_data = np.array([])
 	while True:
 		f_polygons = open(f_polygons_path, 'r')
 		f_normals = open(f_normals_path, 'r')
 
 		polygons_line = f_polygons.readline()
 		normals_line = f_normals.readline()
+		image_count = 0
 		
 		while(polygons_line != '' or normals_line != ''):
+			image_count += 1
 			iter_count += 1
 
 			#polygons
@@ -57,25 +63,31 @@ def getDataLoader(params):
 			normals_data_line = np.fromstring(normals_line, dtype=float, sep=',')
 			normals_data_line = np.expand_dims(np.pad(normals_data_line,(0,feature_size-len(normals_data_line)),'constant',constant_values=(0,PAD_TOKEN)),0)
 			
+			#image
+			f_image_path = os.path.join(f_image_dir_path,'%s.png'%str(image_count).zfill(6))
+			image_data_line = np.expand_dims(np.transpose(np.array(Image.open(f_image_path)),(2,0,1)), axis=0)
 			
 			if(len(polygons_data)==0):
 				polygons_data = polygons_data_line
 				normals_data = normals_data_line
 				seq_len = np.array([cur_seq_len])
 				proj_data = proj_data_line
+				image_data = image_data_line
 			else:
 				polygons_data = np.concatenate((polygons_data, polygons_data_line),axis=0)
 				normals_data = np.concatenate((normals_data, normals_data_line),axis=0)
 				seq_len = np.concatenate((seq_len, np.array([cur_seq_len])),axis=0)
 				proj_data = np.concatenate((proj_data,proj_data_line),axis=0)
+				image_data = np.concatenate((image_data,image_data_line),axis=0)
 
 			if iter_count >= params.batch_size:
-				yield polygons_data, normals_data, seq_len, proj_data
+				yield polygons_data, normals_data, seq_len, proj_data, image_data
 				iter_count = 0
 				polygons_data = np.array([])
 				normals_data = np.array([])
-				seq_len = np.array([])
 				proj_data = np.array([])
+				seq_len = np.array([])
+				image_data = np.array([])
 
 			polygons_line = f_polygons.readline()
 			normals_line = f_normals.readline()
