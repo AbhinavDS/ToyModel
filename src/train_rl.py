@@ -19,12 +19,13 @@ def train_model(params):
 	num_gcns = int(math.ceil(np.log2(max_vertices))) - 2 # - 2 #(since we start with 3 vertices already)
 	
 	params.save_model_dirpath = os.path.join(params.save_model_dirpath, params.sf)
-	load_models = (params.load_model_dirpath == params.save_model_dirpath)
+	load_models = (os.path.realpath(params.load_model_dirpath) == os.path.realpath(params.save_model_dirpath))
 	if not os.path.exists(params.save_model_dirpath):
 		os.makedirs(params.save_model_dirpath)
 		os.makedirs(os.path.join(params.save_model_dirpath,'rl'))
-	else:
-		assert (False, params.save_model_dirpath+" already exists. Overwrite not possible.")
+	elif not load_models:
+		print (params.save_model_dirpath+" already exists. Overwrite not possible.")
+		return
 	params.num_gcns1 = num_gcns
 	params.num_gcns2 = 1
 	params.num_rl = 3
@@ -36,6 +37,7 @@ def train_model(params):
 	
 	iter_count = 0
 	model = Model(params, load_models)
+	params.start_epoch = model.last_epoch
 	optimizer1 = optim.Adam(model.optimizer_params1, lr=params.lr)
 	scheduler1 = optim.lr_scheduler.StepLR(optimizer1, step_size = params.step_size, gamma=params.gamma)
 
@@ -47,7 +49,7 @@ def train_model(params):
 	# iters_per_block = int(num_iters/num_blocks)
 	iters_per_block = params.iters_per_block
 	total_iters = 0
-	for epoch in range(params.num_epochs):
+	for epoch in range(params.start_epoch, params.num_epochs):
 		start_time = time.time()
 		total_closs = 0
 		total_laploss = 0
@@ -61,7 +63,7 @@ def train_model(params):
 			block_id = int(total_iters/iters_per_block)%num_blocks
 			# block_id = int(iters/iters_per_block)
 			print ("##############")
-			print ("BLOCK_ID:: ", block_id)
+			print ("BLOCK_ID:: ", block_id, " EPOCH_NO:: ", epoch)
 			print ("##############")
 			################
 			if block_id == 0:
@@ -119,12 +121,10 @@ def train_model(params):
 				for block_iter in range(block_id):
 					is_last_block = (block_iter==num_blocks-1)
 					if block_iter%2 == 0:
-						action, reward, intersections, pred_genus, gt_genus = model.split(c, x, gt, Pid, mask, proj_pred, proj_gt, epoch * params.data_size + iters, test_rl or  block_id%2 == 0 or not(block_iter==block_id-1), int(block_iter/2), to_split = not is_last_block)		
+						action, reward, intersections, pred_genus, gt_genus = model.split(c, x, gt, Pid, mask, proj_pred, proj_gt, test_rl or  block_id%2 == 0 or not(block_iter==block_id-1), int(block_iter/2), to_split = not is_last_block)		# ep = epoch * params.data_size + iters
 						print (action[0],reward[0],pred_genus[0], gt_genus[0], intersections[0],"Image")
 						A, Pid = model.splitter_block.forward(Pid,intersections)
 					else:
-						print ("Going in Block: ",block_id)
-						assert (not torch.isnan(c).any())
 						x, c, s, A, Pid,  proj_pred = model.deformer_block2.forward(x.detach(), c.detach(), s.detach(), A, Pid, gt, gtnormals, loss_mask)
 						total_closs += model.deformer_block2.closs.item()/norm
 						total_laploss += model.deformer_block2.laploss.item()/norm
@@ -160,7 +160,7 @@ def train_model(params):
 		end_time = time.time()
 
 		
-		model.save(os.path.join(params.save_model_dirpath, "model.toy"))
+		model.save(os.path.join(params.save_model_dirpath, "model.toy"), epoch)
 		print ("Epoch Completed, Time taken: %f"%(end_time-start_time))
 		print("Loss on epoch %i; LR %f; Losses = T:%f,C:%f,L:%f,N:%f,E:%f" % (epoch, optimizer.param_groups[0]['lr'], total_loss,total_closs,total_laploss,total_nloss,total_eloss))
 		scheduler1.step()

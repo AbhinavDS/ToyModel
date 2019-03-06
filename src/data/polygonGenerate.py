@@ -9,6 +9,7 @@ def parseArgs():
 	parser = argparse.ArgumentParser(description='polygonGenerate.py')
 	
 	# General system running and configuration options  
+	parser.add_argument('-f','--filepath', type=str, default='', help='file path to save geenrated data')
 	parser.add_argument('-p','--pad_token', type=str, default=',-2,-2,', help='Pad token to separate polygons in same data instance')
 	parser.add_argument('-s','--suffix', type=str, default='train', help='suffix_name')
 	parser.add_argument('-d','--data_size', type=int, default=1000, help='Data size')
@@ -146,6 +147,8 @@ def dataGenerator(params):
 	if params.mirrored:
 		data_size = int(math.ceil(data_size/2))
 	filepath  = "../../data/1" if total_polygons==1 else "../../data/2"
+	if len(params.filepath):
+		filepath = params.filepath
 	if not os.path.exists(filepath):
 		os.makedirs(filepath)
 	f = open(os.path.join(filepath,'polygons_%s.dat'%suffix),'w')

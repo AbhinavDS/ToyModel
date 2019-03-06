@@ -24,15 +24,17 @@ class RLModule:
 
 		self.ram = buffer.MemoryBuffer(self.MAX_BUFFER)
 		self.trainer = rl_train.Trainer(S_DIM, A_DIM, A_MAX, self.ram, params.batch_size, critic_step=3)
+		self._ep=0
 		
 	
 	def get_new_state(self,state):
 		#return numpy array
 		return state
 
-	def step(self,c, s, gt, A, mask, proj_pred, proj_gt,_ep, to_split = True):
+	def step(self,c, s, gt, A, mask, proj_pred, proj_gt, to_split = True):
 		s_avg = torch.mean(s, dim=1)
 		state = np.float32(np.concatenate((proj_gt,proj_pred, s_avg.cpu().detach().numpy()),axis=1))
+		self._ep += 1
 		for step in range(self.MAX_STEPS):
 			action = self.trainer.get_exploration_action(state)
 			# if _ep%5 == 0:
@@ -76,8 +78,9 @@ class RLModule:
 		gt_genus = utils.calculate_genus(c, to_split)
 		self.trainer.genus_step(state, gt_genus)
 
-		if _ep%200 == 0:
-			self.trainer.save_models((_ep)%10000, path=self.path)
+		if self._ep%200 == 0:
+			self._ep = self._ep % 1000
+			self.trainer.save_models(self._ep, path=self.path)
 		
 		return (action,reward,intersections, pred_genus, gt_genus)
 
