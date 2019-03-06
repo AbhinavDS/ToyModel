@@ -2,26 +2,15 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torchvision.models as torch_models
-import torchvision.transforms as torch_transforms
-
 from torch.autograd import Variable
 
-# from src.loss.chamfer_loss import ChamferLoss
-# from src.loss.edge_loss import EdgeLoss
-# from src.loss.laplacian_loss import LaplacianLoss
-# from src.loss.normal_loss import NormalLoss
-# from src.modules.gcn import GCN
-# from src.modules.vertex_adder import VertexAdder
-# from src.util import utils
-# from src import dtype, dtypeL, dtypeB
-
 class ConvolutionBlock(nn.Module):
-	# def __init__(self, params, normalize=False):
-	def __init__(self, normalize=False):
+	def __init__(self, params, normalize=False):
 		super(ConvolutionBlock, self).__init__()
-		# self.params = params
+		self.params = params
 		self.normalize = normalize
-		self.normalize_layer = torch_transforms.Compose([torch_transforms.ToTensor(),torch_transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])])
+		self.mean = torch.tensor([0.485, 0.456, 0.406]).float().unsqueeze(0).unsqueeze(-1).unsqueeze(-1)
+		self.std = torch.tensor([0.229, 0.224, 0.225]).float().unsqueeze(0).unsqueeze(-1).unsqueeze(-1)
 		self.model = torch_models.vgg16_bn(pretrained=True)
 		self.model.eval()
 		out_list = [22, 32, 42]
@@ -34,7 +23,7 @@ class ConvolutionBlock(nn.Module):
 	
 	def concatFeatureMaps(self, image):
 		if self.normalize:
-			image = self.normalize_layer(image) # SOME ISSUE
+			image = (image - self.mean).div(self.std)
 		self.conv_3_3 = self.layer_3_3(image)
 		self.conv_4_3 = self.layer_4_3(image)
 		self.conv_5_3 = self.layer_5_3(image)
@@ -96,8 +85,9 @@ class ConvolutionBlock(nn.Module):
 		return concat_feats
 
 
-a = ConvolutionBlock(normalize=True) # ISSUE with TRUE
-image = torch.randn(4,3, 224,224)
+params = '1'
+a = ConvolutionBlock(params,normalize=True)
+image= torch.randn(4,3, 224,224)
 c = [[[1,2],[1,10],[0,0]],[[2,4],[5,123],[223,223]],[[12,54],[65,23],[23,54]],[[10,10],[100,100],[34,53]]]
 c = torch.tensor(c).float()
 print (image.size(), c.size())
