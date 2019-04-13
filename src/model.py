@@ -7,7 +7,8 @@ import random
 import math
 from src.data import dataLoader
 from src.util import utils
-from src.modules.convolution_block import ConvolutionBlock
+# from src.modules.convolution_block import ConvolutionBlock
+from src.modules.convolution_block2 import ConvolutionBlock
 from src.modules.deformer_block import DeformerBlock
 from src.modules.vertex_splitter import VertexSplitter
 from src.modules.rl.rl_module import RLModule
@@ -19,7 +20,9 @@ class Model():
 		super(Model, self).__init__()
 		self.params = params
 		self.convolution_block = ConvolutionBlock(self.params, normalize=True)
-		self.deformer_block1 = DeformerBlock(self.params, self.params.num_gcns1, self.params.initial_adders, True, weights_init='xavier')
+		self.deformer_block1 = DeformerBlock(self.params, self.params.num_gcns1, self.params.initial_adders, True, weights_init='xavier', ignore_start_features = True)
+		# self.deformer_block1 = DeformerBlock(self.params, self.params.num_gcns1, self.params.initial_adders,  False, residual_change=True)
+		
 		self.deformer_block2 = DeformerBlock(self.params, self.params.num_gcns2, 0, False, residual_change=True)
 
 		self.splitter_block = VertexSplitter().cuda()
@@ -44,12 +47,18 @@ class Model():
 		if load_models:
 			self.load(os.path.join(params.load_model_dirpath,'model.toy'))
 			self.load_rl(self.params.load_rl_count)
-		
+	
+	def eval(self):
+		self.convolution_block.eval()
+		self.deformer_block1.eval()
+		self.deformer_block2.eval()
+		self.splitter_block.eval()
 
 	def load_rl(self, count):
 		for i in range(len(self.rl_module)):
 			self.rl_module[i].load(count)
 			self.rl_module[i]._ep = count
+			break
 
 	def load(self, path):
 		checkpoint = torch.load(path)

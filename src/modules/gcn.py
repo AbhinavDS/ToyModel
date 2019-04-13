@@ -5,7 +5,7 @@ from torch.autograd import Variable
 from  src import dtype, dtypeL, dtypeB
 
 class GCN(nn.Module):
-	def __init__(self, feature_size, image_feature_size, dim_size, depth, weights_init='zero', residual_change=False):
+	def __init__(self, feature_size, image_feature_size, dim_size, depth, weights_init='zero', residual_change=False, kernel_size=5, ignore_features = False):
 		super(GCN, self).__init__()
 		self.residual_change = residual_change
 		self.feature_size = feature_size
@@ -13,8 +13,16 @@ class GCN(nn.Module):
 		self.dim_size = dim_size #Coordinate dimension
 		self.layers = nn.ModuleList()
 		self.depth = depth
-		self.add_layer(nn.Linear(2*feature_size,feature_size))
-		self.add_layer(nn.Linear(2*feature_size,feature_size))
+		self.kernel_size = kernel_size
+		self.padding_layer = nn.ConstantPad2d(self.kernel_size//2, 0)
+		self.ignore_features = ignore_features
+		if not self.ignore_features:
+			self.add_layer(nn.Linear(self.feature_size+self.image_feature_size, self.feature_size))
+			self.add_layer(nn.Linear(self.feature_size+self.image_feature_size, self.feature_size))
+		else:
+			self.add_layer(nn.Linear(self.image_feature_size, self.feature_size))
+			self.add_layer(nn.Linear(self.image_feature_size, self.feature_size))
+
 		for i in range(depth):
 			self.add_layer(nn.Linear(self.feature_size,self.feature_size))
 			self.add_layer(nn.Linear(self.feature_size,self.feature_size))
@@ -29,6 +37,7 @@ class GCN(nn.Module):
 			self.zero_init()
 		else:
 			self.xavier_init()
+		
 	
 	# Initialize weights according to the Xavier Glorot formula
 	def xavier_init(self):
@@ -60,26 +69,43 @@ class GCN(nn.Module):
 		#image_feats: tuple of 3 feature maps each of (batch_size x C x H x W)
 		
 		temp_A = Variable(torch.Tensor(A).type(dtype),requires_grad=False)
+		
+		feature_from_state = self.extract_features(image_feats, c_prev, kernel_size=self.kernel_size).detach()
+		 
+		if self.ignore_features:
+			x = feature_from_state
+			x = self.a(self.layers[0](x)+torch.bmm(temp_A,self.layers[1](x)))
+		else:
+			x = torch.cat((feature_from_state,x_prev),dim=2)
+			x = self.a(self.layers[0](x)+torch.bmm(temp_A,self.layers[1](x)))
 
-		c_f = self.a(self.W_p_c(c_prev))
-		s_prev = self.extract_features(image_feats, c_prev).detach()
-		s_f = self.a(self.W_p_s(s_prev))
-
-		feature_from_state = self.a(self.W_p(torch.cat((c_f,s_f),dim=2)))
-
-		x = torch.cat((feature_from_state,x_prev),dim=2)
-		x = self.a(self.layers[0](x)+torch.bmm(temp_A,self.layers[1](x)))
 		for i in range(2,len(self.layers),2):
 			x = self.a(self.layers[i](x)+torch.bmm(temp_A,self.layers[i+1](x)) + x)
 		
 		c = self.a(self.W_final(x))
-		if self.residual_change:
+		if self.residual_change and not self.ignore_features:
 			c = c + c_prev
 		return x, c
 
 	def embed(self,c):
 		return self.a(self.W_ic(c))
 
+	def bilinearFeaturesKernel(self, c, featureMap, kernel_size=1):
+		dim = kernel_size//2
+		feats = None
+		padded_featureMap = self.padding_layer(featureMap)
+		pad = torch.tensor([[[dim,dim]]]).cuda().float()
+		for i in range(-dim, dim+1):
+			for j in range(-dim, dim+1):
+				shift = torch.tensor([[[i,j]]]).cuda().float()
+				c_new = c + pad + shift
+				if feats is not None:
+					# feats += self.bilinearFeatures(c_new, padded_featureMap)
+					feats = torch.cat((feats, self.bilinearFeatures(c_new, padded_featureMap)), dim=2)
+				else:
+					feats = self.bilinearFeatures(c_new, padded_featureMap)
+		# feats = feats/(kernel_size*kernel_size)
+		return feats
 
 	def bilinearFeatures(self, c, featureMap):
 		#c: batch_size x V x dim_size
@@ -117,7 +143,7 @@ class GCN(nn.Module):
 
 		return feat.type(dtype)
 
-	def extract_features(self, features, c):
+	def extract_features(self, features, c, kernel_size=1):
 		#c: batch_size x V x dim_size
 		#output: batch_size x V x feature_size
 
@@ -128,19 +154,19 @@ class GCN(nn.Module):
 		c_3_3 = scaled_c.clone()
 		c_3_3[:,:,0] *= (width-1)
 		c_3_3[:,:,1] *= (height-1)
-		feats_3_3 = self.bilinearFeatures(c_3_3, conv_3_3)
+		feats_3_3 = self.bilinearFeaturesKernel(c_3_3, conv_3_3, kernel_size=kernel_size)
 		
 		_, _, height, width  = conv_4_3.size()
 		c_4_3 = scaled_c.clone()
 		c_3_3[:,:,0] *= (width-1)
 		c_3_3[:,:,1] *= (height-1)
-		feats_4_3 = self.bilinearFeatures(c_4_3, conv_4_3)
+		feats_4_3 = self.bilinearFeaturesKernel(c_4_3, conv_4_3, kernel_size=kernel_size)
 
 		_, _, height, width  = conv_5_3.size()
 		c_5_3 = scaled_c.clone()
 		c_3_3[:,:,0] *= (width-1)
 		c_3_3[:,:,1] *= (height-1)
-		feats_5_3 = self.bilinearFeatures(c_5_3, conv_5_3)
+		feats_5_3 = self.bilinearFeaturesKernel(c_5_3, conv_5_3, kernel_size=kernel_size)
 
 		concat_feats = torch.cat([feats_3_3, feats_4_3, feats_5_3], 2)
 

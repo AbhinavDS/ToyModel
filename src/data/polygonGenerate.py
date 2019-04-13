@@ -167,9 +167,10 @@ def dataGenerator(params):
 		radii = []
 		polygons = []
 		for p in range(num_polygons):
-			radius = 30 + 10*np.random.rand()
 			overlap = True
+			# print (data_i)
 			while(overlap):
+				radius = (60 + 10*np.random.rand())
 				c_x = 1.5*radius + (500-1.5*radius)*np.random.rand()
 				c_y = 1.5*radius + (500-1.5*radius)*np.random.rand()
 				found = False

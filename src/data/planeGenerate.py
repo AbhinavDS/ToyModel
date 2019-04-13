@@ -222,6 +222,7 @@ def dataGenerator(params):
 	f_meta.write(str(max_verts)+"\n")
 	f_meta.write(str(data_size))
 	f_meta.close()
+
 def drawPolygons(polygons, proj_pred=None, proj_gt=None, color='red',out='out.png',A=None, line=None):
 	black = (0,0,0)
 	white=(255,255,255)

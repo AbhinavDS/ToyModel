@@ -13,7 +13,7 @@ from src.util import utils
 from src import dtype, dtypeL, dtypeB
 
 class DeformerBlock(nn.Module):
-	def __init__(self, params, num_gcns, initial_adders, embed, weights_init='zero', residual_change=False):
+	def __init__(self, params, num_gcns, initial_adders, embed, weights_init='zero', residual_change=False, ignore_start_features=False):
 		super(DeformerBlock, self).__init__()
 		self.params = params
 		self.num_gcns = num_gcns
@@ -21,7 +21,7 @@ class DeformerBlock(nn.Module):
 		self.embed = embed
 		assert (self.num_gcns > 0, "Number of gcns is 0")
 		
-		self.deformer_block = [GCN(self.params.feature_size, self.params.image_feature_size, self.params.dim_size, self.params.depth, weights_init=weights_init, residual_change=residual_change).cuda() for _ in range(self.num_gcns)]
+		self.deformer_block = [GCN(self.params.feature_size, self.params.image_feature_size, self.params.dim_size, self.params.depth, weights_init=weights_init, residual_change=residual_change, ignore_features=(ignore_start_features and i == 0)).cuda() for i in range(self.num_gcns)]
 		self.adder = VertexAdder(params.add_prob).cuda()
 
 		self.criterionC = ChamferLoss()

@@ -32,8 +32,9 @@ def train_model(params):
 	params.num_rl = 3
 	params.max_vertices = max_vertices
 	params.data_size = data_size
-	params.feature_size = feature_size
-	params.image_feature_size = 1280 #filters of conv_3_3 + conv_4_3 + conv_5_3
+	params.feature_size = 128
+	params.depth = 2
+	params.image_feature_size = 768*25 #1280 #filters of conv_3_3 + conv_4_3 + conv_5_3
 	params.initial_adders = 2
 	print("Num GCNs: " + str(num_gcns))
 	
@@ -64,6 +65,9 @@ def train_model(params):
 			total_iters += 1
 			block_id = int(total_iters/iters_per_block)%num_blocks
 			# block_id = int(iters/iters_per_block)
+			### For now TODO: REMOVE LATER
+			if block_id == num_blocks-1:
+				continue
 			print ("##############")
 			print ("BLOCK_ID:: ", block_id, " EPOCH_NO:: ", epoch)
 			print ("##############")

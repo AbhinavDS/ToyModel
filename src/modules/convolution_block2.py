@@ -1,9 +1,8 @@
 import numpy as np
 import torch
 import torch.nn as nn
-import torchvision.models as torch_models
 from torch.autograd import Variable
-
+from src.modules.tgg import TGG
 from src import dtype, dtypeL, dtypeB
 
 class ConvolutionBlock(nn.Module):
@@ -13,23 +12,16 @@ class ConvolutionBlock(nn.Module):
 		self.normalize = normalize
 		self.mean = torch.tensor([0.485, 0.456, 0.406]).type(dtype).unsqueeze(0).unsqueeze(-1).unsqueeze(-1)
 		self.std = torch.tensor([0.229, 0.224, 0.225]).type(dtype).unsqueeze(0).unsqueeze(-1).unsqueeze(-1)
-		self.model = torch_models.vgg16_bn(pretrained=True).type(dtype)
+		self.model = TGG().cuda()
+		self.model.load_state_dict(torch.load('/home/abhinavds/Documents/Projects/Toy/ImageStory/ckpt_tgg/state_recon_model1_2.tgg'))
 		self.model.eval()
-		out_list = [22, 32, 42]
-		self.layer_3_3 =  nn.Sequential(*list(self.model.features.children())[:out_list[0]])
-		self.layer_4_3 =  nn.Sequential(*list(self.model.features.children())[:out_list[1]])
-		self.layer_5_3 =  nn.Sequential(*list(self.model.features.children())[:out_list[2]])
-		# self.conv_3_3 = None
-		# self.conv_4_3 = None
-		# self.conv_5_3 = None
-	
 	def forward(self, image):
 		if self.normalize:
 			image = (image - self.mean).div(self.std)
-		conv_3_3 = self.layer_3_3(image)
-		conv_4_3 = self.layer_4_3(image)
-		conv_5_3 = self.layer_5_3(image)
-		return (conv_3_3.detach(), conv_4_3.detach(), conv_5_3.detach())
+		# output = self.model(image)[1]
+		# return (output.detach(), output.detach(), output.detach())
+		conv3, conv4, conv5 = self.model(image)
+		return (conv3.detach(), conv4.detach(), conv5.detach())
 
 	
 

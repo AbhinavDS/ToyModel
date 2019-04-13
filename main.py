@@ -1,5 +1,5 @@
 from src.train_rl import train_model
-# from src.test import test_model
+from src.test import test_model
 import argparse
 
 
@@ -39,7 +39,7 @@ if __name__=="__main__":
     args = parseArgs()
     print(args)
     if(args.test):
-        # test_model(args)
+        test_model(args)
         pass
     else:
         train_model(args)

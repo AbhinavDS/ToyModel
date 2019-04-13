@@ -1,119 +1,139 @@
-# import time
-# import torch
-# from torch import optim
-# import numpy as np
-# import random
-# import math
-# from src.data import dataLoader
-# from src.util import utils
-# from src.loss.chamfer_loss import ChamferLoss
-# from src.loss.normal_loss import NormalLoss
-# from src.loss.laplacian_loss import LaplacianLoss
-# from src.loss.edge_loss import EdgeLoss
-# from src.modules.deformer import Deformer
-# from src.modules.vertex_adder import VertexAdder
+import os
+import time
+import torch
+from torch import optim
+import numpy as np
+import random
+import math
+from src.util import utils
+from src.data import dataLoader
+from src.model import Model
+from  src import dtype, dtypeL, dtypeB
 
-# from  src import dtype, dtypeL, dtypeB
-# def test_model(params):
-# 	# MAKE THE DATA loader
-# 	max_vertices, feature_size, data_size = dataLoader.getMetaData(params)
-# 	dim_size = params.dim_size
-# 	train_data_loader = dataLoader.getDataLoader(params)
-# 	num_blocks = int(math.ceil(np.log2(max_vertices))) - 1 #(since we start with 3 vertices already)
-# 	print("Num Blocks: " + str(num_blocks))
+import src.modules.rl.utils as utils_rl
+
+def test_model(params):
+	max_vertices, feature_size, data_size = dataLoader.getMetaData(params)
+	dim_size = params.dim_size
+	train_data_loader = dataLoader.getDataLoader(params)
+	num_gcns = int(math.ceil(np.log2(max_vertices))) - 2 # - 2 #(since we start with 3 vertices already)
 	
-# 	iter_count = 0
-# 	# RUN TRAINING AND TEST
-# 	if torch.cuda.is_available():
-# 		deformer = Deformer(feature_size,dim_size,params.depth).cuda()
-# 	else:
-# 		deformer = Deformer(feature_size,dim_size,params.depth)
-
-# 	if params.load_model_path:
-# 		deformer.load_state_dict(torch.load(params.load_model_path))
+	params.save_model_dirpath = params.load_model_dirpath
+	load_models = True
+	params.num_gcns1 = num_gcns
+	params.num_gcns2 = 1
+	params.num_rl = 3
+	params.max_vertices = max_vertices
+	params.data_size = data_size
+	params.feature_size = feature_size
+	params.image_feature_size = 768*25 #1280 #filters of conv_3_3 + conv_4_3 + conv_5_3
+	params.initial_adders = 2
+	print("Num GCNs: " + str(num_gcns))
 	
-# 	adder = VertexAdder().cuda()
-# 	criterionC = ChamferLoss()
-# 	criterionN = NormalLoss()
-# 	criterionL = LaplacianLoss()
-# 	criterionE = EdgeLoss()
-# 	optimizer = optim.Adam(deformer.parameters(), lr=params.lr)
-# 	scheduler = optim.lr_scheduler.StepLR(optimizer, step_size = params.step_size, gamma=params.gamma)
-# 	c,_,_ = utils.inputMesh(feature_size)
+	iter_count = 0
+	model = Model(params, load_models=load_models)
+	model.eval()
+	params.start_epoch = 0
+	num_iters = int(math.ceil(data_size/params.batch_size))
+	num_blocks = (2*params.num_polygons)
+	# iters_per_block = int(num_iters/num_blocks)
+	iters_per_block = params.iters_per_block
+	total_iters = 0
+	for epoch in range(params.start_epoch , params.num_epochs):
+		start_time = time.time()
+		total_closs = 0
+		total_laploss = 0
+		total_nloss = 0
+		total_eloss = 0
+		total_loss = 0
+		for iters in range(num_iters):
+			# Train this part
+			test_rl = True
+			total_iters += 1
+			block_id = num_blocks - 3 #int(total_iters/iters_per_block)%num_blocks
+			# block_id = int(iters/iters_per_block)
+			### For now TODO: REMOVE LATER
+			if block_id == num_blocks-1:
+				continue
+			print ("##############")
+			print ("BLOCK_ID:: ", block_id, " EPOCH_NO:: ", epoch)
+			print ("##############")
+			#################
 
+			# Iterator
+			train_data, train_data_normal, seq_len, proj_gt, train_data_images = next(train_data_loader)
 
-# 	epoch = 0
-# 	scheduler.step()
-# 	total_loss = 0.0
-# 	total_closs = 0
-# 	total_laploss = 0
-# 	total_nloss = 0
-# 	total_eloss = 0
-# 	total_sloss = 0
-# 	start_time = time.time()
-# 	for i in range(int(math.ceil(data_size/params.batch_size))):
-# 		optimizer.zero_grad()
-# 		train_data, train_data_normal, seq_len, proj_data = next(train_data_loader)
-# 		# input 
-# 		s = torch.Tensor(train_data).type(dtype).unsqueeze(1).repeat(1,3,1)
-# 		c,x,A = utils.inputMesh(feature_size)# x is c with zeros appended, x=f ..pixel2mesh
-# 		c = np.expand_dims(c, 0)
-# 		c = np.tile(c,(params.batch_size, 1, 1))
-# 		x = np.expand_dims(x, 0)
-# 		x = np.tile(x,(params.batch_size, 1, 1))
-# 		A = np.expand_dims(A, 0)
-# 		A = np.tile(A,(params.batch_size, 1, 1))
-# 		x = torch.Tensor(x).type(dtype)
-# 		c = torch.Tensor(c).type(dtype)
-# 		gt = torch.Tensor(utils.reshapeGT(params,train_data)).type(dtype)#vertices x dim_size
-# 		gtnormals = torch.Tensor(utils.reshapeGT(params,train_data_normal)).type(dtype)#vertices x dim_size
+			# Input 
+			gt = torch.Tensor(utils.reshapeGT(params,train_data)).type(dtype) #vertices x dim_size
+			gtnormals = torch.Tensor(utils.reshapeGT(params,train_data_normal)).type(dtype) #vertices x dim_size
+			gt_images = torch.Tensor(train_data_images).type(dtype)
+			image_feats = model.convolution_block.forward(gt_images)
 
-# 		mask = utils.create_mask(gt, seq_len)
-# 		mask = torch.Tensor(mask).type(dtypeB)
-		
-# 		gt.requires_grad = False
-# 		loss = 0.0
-# 		closs = 0.0
-# 		laploss = 0
-# 		nloss = 0
-# 		eloss = 0
+			# Masks for batch size
+			mask = utils.create_mask(gt, seq_len)
+			mask = torch.Tensor(mask).type(dtypeB)
+			loss_mask = utils.create_loss_mask(gt) # also masks extra padded -2 between polygons for loss calculation
+			loss_mask = torch.Tensor(loss_mask).type(dtypeB)
 
-		
-# 		# Vertex addition
+			gt.requires_grad = False
+			gtnormals.requires_grad = False
+			mask.requires_grad = False
+			loss_mask.requires_grad = False
 
-# 		x = deformer.embed(c)
-# 		c_prev = c
-# 		x, s, c = deformer.forward(x,s,c_prev,A)
-# 		laploss = criterionL(c_prev, c, A)
-# 		closs = criterionC(c, gt, mask)
-# 		eloss = criterionE(c, A)
-# 		nloss = criterionN(c, gt, gtnormals, A, mask)
-		
+			x, c, A = model.create_start_data()
+			Pid = np.copy(A)
 
-# 		for block in range(num_blocks):
-# 			x, c, A = adder.forward(x,c,A)
-# 			s = torch.cat((s,s),dim=1)
-# 			c_prev = c
-# 			x, s, c = deformer.forward(x,s,c_prev,A)
+			# Start Processing
+			x, c, A, Pid, proj_pred = model.deformer_block1.forward(x, c, A, Pid, gt, gtnormals, loss_mask, image_feats)
+
+			norm = len(train_data) * (int((block_id)/2)+1)
+			total_closs += model.deformer_block1.closs.item()/norm
+			total_laploss += model.deformer_block1.laploss.item()/norm
+			total_nloss += model.deformer_block1.nloss.item()/norm
+			total_eloss += model.deformer_block1.eloss.item()/norm
+			total_loss += model.deformer_block1.loss.item()/norm
+
+			masked_gt = gt[0].masked_select(mask[0].unsqueeze(1).repeat(1,dim_size)).reshape(-1, dim_size)
 			
-# 			laploss += criterionL(c_prev, c, A)
-# 			closs += criterionC(c, gt, mask)
-# 			eloss += criterionE(c, A)
-# 			nloss += criterionN(c, gt, gtnormals, A, mask)
-			
-# 		loss = closs + params.lambda_n*nloss + params.lambda_lap*laploss + params.lambda_e*eloss
-# 		total_closs +=closs/len(train_data)
-# 		total_laploss +=laploss/len(train_data)
-# 		total_nloss +=nloss/len(train_data)
-# 		total_eloss +=eloss/len(train_data)
-# 		total_loss += loss/len(train_data)
-			
-# 		masked_gt = gt[0].masked_select(mask[0].unsqueeze(1).repeat(1,dim_size)).reshape(-1, dim_size)
-# 		utils.drawPolygons(utils.getPixels(c[0]),utils.getPixels(masked_gt),proj_data=proj_data[0],color='red',out='results/pred_test.png',A=A[0])
-# 		print("Loss on epoch %i, iteration %i: LR = %f;Losses = T:%f,C:%f,L:%f,N:%f,E:%f" % (epoch, iter_count, optimizer.param_groups[0]['lr'], loss, closs, laploss, nloss, eloss))
-# 		input("press enter")
-# 		iter_count += params.batch_size
-# 	end_time = time.time()
-# 	print ("Epoch Completed, Time taken: %f"%(end_time-start_time))
-# 	print("Loss on epoch %i,  LR = %f;Losses = T:%f,C:%f,L:%f,N:%f,E:%f" % (epoch, optimizer.param_groups[0]['lr'], total_loss,total_closs,total_laploss,total_nloss,total_eloss))
+			if block_id == 0:
+				color = 'red'# if reward[0] else 'blue'
+				utils.drawPolygons(utils.getPixels(c[0]),utils.getPixels(masked_gt),proj_pred=proj_pred[0], proj_gt=proj_gt[0], color=color,out='results/test_pred_rl_%s.png'%params.sf,A=A[0])#, line=(action[0][0],action[0][1],action[0][2],action[0][3]))
+			else: #[1,2,3,4,5] no 0 [S,SD,SDS,SDSD,SDSDS]
+				action, reward = None, None
+				# block iter iterates over the sequence SDSDS or whatever given by block id.
+				# trains last splitter block (when block_id is S,SDS,SDSDS)denoted by the odd block_id or all the deformer blocks if even block id (when SD,SDSD)
+				for block_iter in range(block_id):
+					is_last_block = (block_iter==num_blocks-1)
+					if block_iter%2 == 0:
+						action, reward, intersections, pred_genus, gt_genus = model.split(c, x, gt, Pid, mask, proj_pred, proj_gt, test_rl or  block_id%2 == 0 or not(block_iter==block_id-1), int(block_iter/2), to_split = not is_last_block)		# ep = epoch * params.data_size + iters
+						print (action[0],reward[0],pred_genus[0], gt_genus[0], intersections[0],"Image")
+						A, Pid = model.splitter_block.forward(Pid,intersections)
+					else:
+						x, c, A, Pid,  proj_pred = model.deformer_block2.forward(x.detach(), c.detach(), A, Pid, gt, gtnormals, loss_mask, image_feats)
+						total_closs += model.deformer_block2.closs.item()/norm
+						total_laploss += model.deformer_block2.laploss.item()/norm
+						total_nloss += model.deformer_block2.nloss.item()/norm
+						total_eloss += model.deformer_block2.eloss.item()/norm
+						total_loss += model.deformer_block2.loss.item()/norm
+						
+					if block_iter == block_id-1:
+						color = 'red' if (block_id%2==0 or is_last_block) else 'blue'
+						utils.drawPolygons(utils.getPixels(c[0]),utils.getPixels(masked_gt),proj_pred=proj_pred[0], proj_gt=proj_gt[0], color=color,out='results/test_pred_rl_%s.png'%params.sf,A=A[0], line=(action[0][0],action[0][1],action[0][2],action[0][3]))
 
+			if (iter_count % params.show_stat == 0) and (block_id==0) and block_id%2 == 0 :
+				masked_gt = gt[0].masked_select(mask[0].unsqueeze(1).repeat(1,dim_size)).reshape(-1, dim_size)
+				utils.drawPolygons(utils.getPixels(c[0]),utils.getPixels(masked_gt),proj_pred=proj_pred[0], proj_gt=proj_gt[0], color='red',out='results/test_pred_rl_%s.png'%params.sf,A=A[0])
+				if block_id == 0:
+					b1 = model.deformer_block1
+					print("Loss on epoch %i, iteration %i: Losses = T:%f,C:%f,L:%f,N:%f,E:%f" % (epoch, iter_count, b1.loss, b1.closs, b1.laploss, b1.nloss, b1.eloss))
+				else:
+					b2 = model.deformer_block2
+					print("Loss on epoch %i, iteration %i: Losses = T:%f,C:%f,L:%f,N:%f,E:%f" % (epoch, iter_count, b2.loss, b2.closs, b2.laploss, b2.nloss, b2.eloss))
+			
+			iter_count += params.batch_size
+			asdasdasa = input('w')
+		end_time = time.time()
+
+		print ("Epoch Completed, Time taken: %f"%(end_time-start_time))
+		print("Loss on epoch %i; Losses = T:%f,C:%f,L:%f,N:%f,E:%f" % (epoch, total_loss,total_closs,total_laploss,total_nloss,total_eloss))
+		
