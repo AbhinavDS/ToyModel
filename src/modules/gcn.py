@@ -17,18 +17,18 @@ class GCN(nn.Module):
 		self.padding_layer = nn.ConstantPad2d(self.kernel_size//2, 0)
 		self.ignore_features = ignore_features
 		if not self.ignore_features:
-			self.add_layer(nn.Linear(self.feature_size+self.image_feature_size, self.feature_size))
-			self.add_layer(nn.Linear(self.feature_size+self.image_feature_size, self.feature_size))
+			self.add_layer(nn.Linear((3*self.feature_size), self.feature_size))
+			self.add_layer(nn.Linear((3*self.feature_size), self.feature_size))
 		else:
-			self.add_layer(nn.Linear(self.image_feature_size, self.feature_size))
-			self.add_layer(nn.Linear(self.image_feature_size, self.feature_size))
+			self.add_layer(nn.Linear(2*self.feature_size, self.feature_size))
+			self.add_layer(nn.Linear(2*self.feature_size, self.feature_size))
 
 		for i in range(depth):
 			self.add_layer(nn.Linear(self.feature_size,self.feature_size))
 			self.add_layer(nn.Linear(self.feature_size,self.feature_size))
 		self.W_p_c = nn.Linear(self.dim_size,self.feature_size)
 		self.W_p_s = nn.Linear(self.image_feature_size,self.feature_size)
-		self.W_p = nn.Linear(2*self.feature_size,self.feature_size)
+		self.W_p = nn.Linear(2*self.feature_size, self.image_feature_size)
 		self.W_c = nn.Linear(self.feature_size,self.dim_size)
 		self.W_ic = nn.Linear(self.dim_size,self.feature_size)
 		self.W_final = nn.Linear(self.feature_size,self.dim_size)
@@ -70,15 +70,16 @@ class GCN(nn.Module):
 		
 		temp_A = Variable(torch.Tensor(A).type(dtype),requires_grad=False)
 		
-		feature_from_state = self.extract_features(image_feats, c_prev, kernel_size=self.kernel_size).detach()
 		 
+		c_f = self.a(self.W_p_c(c_prev))
+		s_prev = self.extract_features(image_feats, c_prev, kernel_size=self.kernel_size).detach()
+		feature_from_state = self.a(self.W_p_s(s_prev))
 		if self.ignore_features:
-			x = feature_from_state
-			x = self.a(self.layers[0](x)+torch.bmm(temp_A,self.layers[1](x)))
+			x = torch.cat((feature_from_state, c_f),dim=2)
 		else:
-			x = torch.cat((feature_from_state,x_prev),dim=2)
-			x = self.a(self.layers[0](x)+torch.bmm(temp_A,self.layers[1](x)))
+			x = torch.cat((feature_from_state, c_f, x_prev),dim=2)
 
+		x = self.a(self.layers[0](x)+torch.bmm(temp_A,self.layers[1](x)))
 		for i in range(2,len(self.layers),2):
 			x = self.a(self.layers[i](x)+torch.bmm(temp_A,self.layers[i+1](x)) + x)
 		

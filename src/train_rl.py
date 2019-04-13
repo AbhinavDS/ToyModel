@@ -34,7 +34,8 @@ def train_model(params):
 	params.data_size = data_size
 	params.feature_size = 128
 	params.depth = 0
-	params.image_feature_size = 768*25 #1280 #filters of conv_3_3 + conv_4_3 + conv_5_3
+	params.kernel_size = 5 # only odd values
+	params.image_feature_size = 768*(params.kernel_size ** 2) #1280 #filters of conv_3_3 + conv_4_3 + conv_5_3
 	params.initial_adders = 2
 	print("Num GCNs: " + str(num_gcns))
 	

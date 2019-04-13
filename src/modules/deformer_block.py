@@ -21,7 +21,7 @@ class DeformerBlock(nn.Module):
 		self.embed = embed
 		assert (self.num_gcns > 0, "Number of gcns is 0")
 		
-		self.deformer_block = [GCN(self.params.feature_size, self.params.image_feature_size, self.params.dim_size, self.params.depth, weights_init=weights_init, residual_change=residual_change, ignore_features=(ignore_start_features and i == 0)).cuda() for i in range(self.num_gcns)]
+		self.deformer_block = [GCN(self.params.feature_size, self.params.image_feature_size, self.params.dim_size, self.params.depth, weights_init=weights_init, residual_change=residual_change, kernel_size=params.kernel_size, ignore_features=(ignore_start_features and i == 0)).cuda() for i in range(self.num_gcns)]
 		self.adder = VertexAdder(params.add_prob).cuda()
 
 		self.criterionC = ChamferLoss()
