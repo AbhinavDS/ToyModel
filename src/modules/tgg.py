@@ -61,21 +61,10 @@ class TGG(nn.Module):
 		conv1 = self.conv_block1(x)
 		conv2 = self.conv_block2(conv1)
 		conv3 = self.conv_block3(conv2)
-		conv3 = self.channel_normalize(conv3)
 		conv4 = self.conv_block4(conv3)
 		conv5 = self.conv_block5(conv4)
 		return conv3, conv4, conv5
 
-	def channel_normalize(self,x):
-		x = x.permute(1,0,2,3)
-		orig_shape = x.size()
-		x = x.reshape((x.size(0), -1))
-		max_x = x.max(1, keepdim=True)[0]
-		max_x[max_x == 0] = 1
-		x_normed = x / max_x
-		x_normed = x_normed.reshape(orig_shape)
-		x_normed = x_normed.permute(1,0,2,3)
-		return x_normed
 
 	def init_vgg16_params(self, vgg16):
 		blocks = [

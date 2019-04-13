@@ -33,7 +33,7 @@ def train_model(params):
 	params.max_vertices = max_vertices
 	params.data_size = data_size
 	params.feature_size = 128
-	params.depth = 2
+	params.depth = 0
 	params.image_feature_size = 768*25 #1280 #filters of conv_3_3 + conv_4_3 + conv_5_3
 	params.initial_adders = 2
 	print("Num GCNs: " + str(num_gcns))

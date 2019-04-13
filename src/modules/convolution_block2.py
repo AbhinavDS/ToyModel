@@ -15,15 +15,28 @@ class ConvolutionBlock(nn.Module):
 		self.model = TGG().cuda()
 		self.model.load_state_dict(torch.load('/home/abhinavds/Documents/Projects/Toy/ImageStory/ckpt_tgg/state_recon_model1_2.tgg'))
 		self.model.eval()
+		
 	def forward(self, image):
 		if self.normalize:
 			image = (image - self.mean).div(self.std)
 		# output = self.model(image)[1]
 		# return (output.detach(), output.detach(), output.detach())
 		conv3, conv4, conv5 = self.model(image)
+		conv3 = self.channel_normalize(conv3)
+		conv4 = self.channel_normalize(conv4)
+		conv5 = self.channel_normalize(conv5)
 		return (conv3.detach(), conv4.detach(), conv5.detach())
 
-	
+	def channel_normalize(self,x):
+		x = x.permute(1,0,2,3)
+		orig_shape = x.size()
+		x = x.reshape((x.size(0), -1))
+		max_x = x.max(1, keepdim=True)[0]
+		max_x[max_x == 0] = 1
+		x_normed = x / max_x
+		x_normed = x_normed.reshape(orig_shape)
+		x_normed = x_normed.permute(1,0,2,3)
+		return x_normed	
 
 if __name__=="__main__":
 	params = '1'

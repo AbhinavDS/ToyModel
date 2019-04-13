@@ -26,10 +26,21 @@ class ConvolutionBlock(nn.Module):
 	def forward(self, image):
 		if self.normalize:
 			image = (image - self.mean).div(self.std)
-		conv_3_3 = self.layer_3_3(image)
-		conv_4_3 = self.layer_4_3(image)
-		conv_5_3 = self.layer_5_3(image)
+		conv_3_3 = self.channel_normalize(self.layer_3_3(image))
+		conv_4_3 = self.channel_normalize(self.layer_4_3(image))
+		conv_5_3 = self.channel_normalize(self.layer_5_3(image))
 		return (conv_3_3.detach(), conv_4_3.detach(), conv_5_3.detach())
+
+	def channel_normalize(self,x):
+		x = x.permute(1,0,2,3)
+		orig_shape = x.size()
+		x = x.reshape((x.size(0), -1))
+		max_x = x.max(1, keepdim=True)[0]
+		max_x[max_x == 0] = 1
+		x_normed = x / max_x
+		x_normed = x_normed.reshape(orig_shape)
+		x_normed = x_normed.permute(1,0,2,3)
+		return x_normed
 
 	
 
