@@ -36,6 +36,8 @@ def train_model(params):
 	params.depth = 0
 	params.kernel_size = 5 # only odd values
 	params.image_feature_size = 768*(params.kernel_size ** 2) #1280 #filters of conv_3_3 + conv_4_3 + conv_5_3
+	params.rl_image_resolution = (600//24, 600//24)
+	params.num_image_feats_layers = 3
 	params.initial_adders = 2
 	print("Num GCNs: " + str(num_gcns))
 	
@@ -128,7 +130,9 @@ def train_model(params):
 				for block_iter in range(block_id):
 					is_last_block = (block_iter==num_blocks-1)
 					if block_iter%2 == 0:
-						action, reward, intersections, pred_genus, gt_genus = model.split(c, x, gt, Pid, mask, proj_pred, proj_gt, test_rl or  block_id%2 == 0 or not(block_iter==block_id-1), int(block_iter/2), to_split = not is_last_block)		# ep = epoch * params.data_size + iters
+						rl_image_feats = image_feats
+						rl_image_feats = [gt_images]
+						action, reward, intersections, pred_genus, gt_genus = model.split_image(c, x, gt, Pid, mask, rl_image_feats, test_rl or  block_id%2 == 0 or not(block_iter==block_id-1), int(block_iter/2), to_split = not is_last_block)		# ep = epoch * params.data_size + iters
 						print (action[0],reward[0],pred_genus[0], gt_genus[0], intersections[0],"Image")
 						A, Pid = model.splitter_block.forward(Pid,intersections)
 					else:
@@ -140,9 +144,7 @@ def train_model(params):
 						total_loss += model.deformer_block2.loss.item()/norm
 						if (block_id%2 == 0):
 							model.deformer_block2.loss.backward(retain_graph = True)
-							# model.deformer_block2.set_loss_to_zero()
 						else:
-							# model.deformer_block2.set_loss_to_zero()
 							pass
 
 					if block_iter == block_id-1:

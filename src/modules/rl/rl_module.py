@@ -18,7 +18,9 @@ class RLModule:
 		self.path = os.path.join(self.params.save_model_dirpath, "rl")
 		self.path = os.path.join(self.path, self.prefix)
 
-		S_DIM = 2*params.img_width + params.feature_size
+		#S_DIM = 2*params.img_width + params.feature_size
+		# S_DIM = params.rl_image_resolution[0]*params.rl_image_resolution[1]*params.num_image_feats_layers + params.feature_size
+		S_DIM = params.rl_image_resolution[0]*params.rl_image_resolution[1] + params.feature_size
 		A_DIM = 4
 		A_MAX = 1
 
@@ -31,9 +33,7 @@ class RLModule:
 		#return numpy array
 		return state
 
-	def step(self,c, s, gt, A, mask, proj_pred, proj_gt, to_split = True):
-		s_avg = torch.mean(s, dim=1)
-		state = np.float32(np.concatenate((proj_gt,proj_pred, s_avg.cpu().detach().numpy()),axis=1))
+	def step(self, c, gt, A, mask, state, to_split = True):
 		self._ep += 1
 		for step in range(self.MAX_STEPS):
 			action = self.trainer.get_exploration_action(state)
@@ -84,13 +84,11 @@ class RLModule:
 		
 		return (action,reward,intersections, pred_genus, gt_genus)
 
-	def step_test(self,c, s, gt, A, mask, proj_pred, proj_gt):
+	def step_test(self,c, gt, A, mask, state):
 		self.trainer.actor.eval()
 		self.trainer.target_actor.eval()
 		self.trainer.critic.eval()
 		self.trainer.target_critic.eval()
-		s_avg = torch.mean(s, dim=1).detach()
-		state = np.float32(np.concatenate((proj_gt,proj_pred, s_avg.cpu().numpy()),axis=1))
 		gc.collect()
 		action, genus = self.trainer.get_final_action(state)
 		intersections  = utils.get_intersections(action, c, A, self.params)

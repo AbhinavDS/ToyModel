@@ -5,6 +5,7 @@ import torch.nn as nn
 import numpy as np
 import random
 import math
+from scipy.misc import imresize as imresize
 from src.data import dataLoader
 from src.util import utils
 # from src.modules.convolution_block import ConvolutionBlock
@@ -89,7 +90,41 @@ class Model():
 
 	def split(self, c, x, gt, A, mask, proj_pred, proj_gt, test, block, to_split = True):
 		if test:
-			return self.rl_module[block].step_test(c, x, gt, A, mask, proj_pred, proj_gt)
+			x_avg = torch.mean(x, dim=1).cpu().detach().numpy()
+			state = np.float32(np.concatenate((proj_gt,proj_pred, x_avg),axis=1))
+			return self.rl_module[block].step_test(c, gt, A, mask, state)
 		else:
+			x_avg = torch.mean(x, dim=1).cpu().detach().numpy()
+			state = np.float32(np.concatenate((proj_gt,proj_pred, x_avg),axis=1))
 			self.rl_module[block].step(c, x, gt, A, mask, proj_pred, proj_gt, to_split)
-			return self.rl_module[block].step(c, x, gt, A, mask, proj_pred, proj_gt, to_split)
+			return self.rl_module[block].step(c,  gt, A, mask, state, to_split)
+
+	def split_image(self, c, x, gt, A, mask, image_features, test, block, to_split = True):
+		if test:
+			x_avg = torch.mean(x, dim=1).cpu().detach().numpy()
+			img_state = self.get_image_state(image_features)
+			state = np.float32(np.concatenate((img_state, x_avg),axis=1))
+			return self.rl_module[block].step_test(c, gt, A, mask, state)
+		else:
+			x_avg = torch.mean(x, dim=1).cpu().detach().numpy()
+			img_state = self.get_image_state(image_features)
+			state = np.float32(np.concatenate((img_state, x_avg),axis=1))
+			return self.rl_module[block].step(c, gt, A, mask, state, to_split)
+
+	def get_image_state(self, image_features):
+		size = self.params.rl_image_resolution
+		bs = self.params.batch_size
+		rl_img_feats = []
+		for i in range(len(image_features)):
+			rl_img_feats.append(None)
+			conv = image_features[i]
+			conv = torch.mean(conv, dim=1).squeeze(1).cpu().detach().numpy()
+			new_conv = np.zeros((bs, size[0], size[1]), dtype=np.float32)
+			for j in range(bs):
+				new_conv[j] = imresize(conv[j], size, interp='bilinear')
+			rl_img_feats[i]= new_conv.reshape((bs, -1))
+		# img_state = np.concatenate((rl_img_feats[0], rl_img_feats[1], rl_img_feats[2]),axis=1)
+		for i in range(1,len(image_features)):
+			rl_img_feats[0] += rl_img_feats[i]
+		img_state = rl_img_feats[0]/len(image_features)
+		return img_state
