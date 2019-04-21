@@ -36,8 +36,9 @@ def train_model(params):
 	params.depth = 0
 	params.kernel_size = 5 # only odd values
 	params.image_feature_size = 768*(params.kernel_size ** 2) #1280 #filters of conv_3_3 + conv_4_3 + conv_5_3
-	params.rl_image_resolution = (600//24, 600//24)
-	params.num_image_feats_layers = 3
+	scale = 12#24
+	params.rl_image_resolution = (600//scale, 600//scale)
+	params.num_image_feats_layers_rl = 5
 	params.initial_adders = 2
 	print("Num GCNs: " + str(num_gcns))
 	
@@ -120,6 +121,7 @@ def train_model(params):
 			if block_id == 0:
 				color = 'red'# if reward[0] else 'blue'
 				utils.drawPolygons(utils.getPixels(c[0]),utils.getPixels(masked_gt),proj_pred=proj_pred[0], proj_gt=proj_gt[0], color=color,out='results/pred_rl_%s.png'%params.sf,A=A[0])#, line=(action[0][0],action[0][1],action[0][2],action[0][3]))
+				# utils.get_image_from_coords(c,A,gt_images.size(2), gt_images.size(3), out='results/gen_rl_%s.png'%params.sf)
 				model.deformer_block1.loss.backward()
 				# model.deformer_block1.set_loss_to_zero()
 				optimizer.step()
@@ -130,8 +132,11 @@ def train_model(params):
 				for block_iter in range(block_id):
 					is_last_block = (block_iter==num_blocks-1)
 					if block_iter%2 == 0:
-						rl_image_feats = image_feats
-						rl_image_feats = [gt_images]
+						rl_image_feats = list(image_feats)
+						pred_images = utils.get_image_from_coords(c, (Pid>0), gt_images.size(2), gt_images.size(3))
+						rl_image_feats.append(gt_images/255.0)
+						rl_image_feats.append(pred_images)
+
 						action, reward, intersections, pred_genus, gt_genus = model.split_image(c, x, gt, Pid, mask, rl_image_feats, test_rl or  block_id%2 == 0 or not(block_iter==block_id-1), int(block_iter/2), to_split = not is_last_block)		# ep = epoch * params.data_size + iters
 						print (action[0],reward[0],pred_genus[0], gt_genus[0], intersections[0],"Image")
 						A, Pid = model.splitter_block.forward(Pid,intersections)
@@ -150,14 +155,14 @@ def train_model(params):
 					if block_iter == block_id-1:
 						color = 'red' if (block_id%2==0 or is_last_block) else 'blue'
 						utils.drawPolygons(utils.getPixels(c[0]),utils.getPixels(masked_gt),proj_pred=proj_pred[0], proj_gt=proj_gt[0], color=color,out='results/pred_rl_%s.png'%params.sf,A=A[0], line=(action[0][0],action[0][1],action[0][2],action[0][3]))
-
+						# utils.get_image_from_coords(c,A,gt_images.size(2), gt_images.size(3), out='results/gen_rl_%s.png'%params.sf)
 				if block_id%2 == 0:
 					optimizer.step()
-			
 			print (block_id, (iter_count % params.show_stat == 0), (block_id==0), block_id%2 == 0)
 			if (iter_count % params.show_stat == 0) and (block_id==0) and block_id%2 == 0 :
 				masked_gt = gt[0].masked_select(mask[0].unsqueeze(1).repeat(1,dim_size)).reshape(-1, dim_size)
 				utils.drawPolygons(utils.getPixels(c[0]),utils.getPixels(masked_gt),proj_pred=proj_pred[0], proj_gt=proj_gt[0], color='red',out='results/pred_rl_%s.png'%params.sf,A=A[0])
+				# utils.get_image_from_coords(c,A,gt_images.size(2), gt_images.size(3), out='results/gen_rl_%s.png'%params.sf)
 				if block_id == 0:
 					b1 = model.deformer_block1
 					print("Loss on epoch %i, iteration %i: LR = %f;Losses = T:%f,C:%f,L:%f,N:%f,E:%f" % (epoch, iter_count, optimizer.param_groups[0]['lr'], b1.loss, b1.closs, b1.laploss, b1.nloss, b1.eloss))

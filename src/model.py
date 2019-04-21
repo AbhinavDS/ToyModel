@@ -123,8 +123,9 @@ class Model():
 			for j in range(bs):
 				new_conv[j] = imresize(conv[j], size, interp='bilinear')
 			rl_img_feats[i]= new_conv.reshape((bs, -1))
-		# img_state = np.concatenate((rl_img_feats[0], rl_img_feats[1], rl_img_feats[2]),axis=1)
-		for i in range(1,len(image_features)):
-			rl_img_feats[0] += rl_img_feats[i]
-		img_state = rl_img_feats[0]/len(image_features)
+		print (len(rl_img_feats))
+		img_state = np.concatenate(tuple(rl_img_feats),axis=1)
+		# for i in range(1,len(image_features)):
+		# 	rl_img_feats[0] += rl_img_feats[i]
+		# img_state = rl_img_feats[0]/len(image_features)
 		return img_state

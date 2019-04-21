@@ -1,5 +1,6 @@
 import numpy as np
 from PIL import Image, ImageDraw
+import torch
 MEAN = 300
 VAR = 300
 PAD_TOKEN = -2
@@ -139,7 +140,7 @@ def flatten_pred(c,A,params):
 	minx = params.img_width - 1
 	maxx = 0
 	
-	start = v
+
 	minx = min(minx,c[v,0])
 	maxx = max(maxx,c[v,0])
 	vertFlags[v] = 1
@@ -184,3 +185,56 @@ def flatten_pred_batch(c,A,params):
 			proj_batch = np.concatenate((proj_batch, proj), axis=0)
 	return proj_batch
 
+def get_image_from_coords(cb, Ab, h, w, out = None):
+	batch_size = cb.size(0)
+	image = torch.Tensor(batch_size,1,h,w).cuda()
+	for b in range(batch_size):
+		c = getPixels(cb[b])
+		A = Ab[b]
+		num_verts = len(c)
+		vertFlags = np.zeros(num_verts)
+		v = 0
+		
+		points = []
+		
+
+		poly_id = 0
+		points.append([])
+
+		points[poly_id].append(c[v])
+		vertFlags[v] = 1
+		for j in range(num_verts):
+			if A[v,j] and vertFlags[j]==0:
+				v = j
+				break
+		while True:
+			points[poly_id].append(c[v])
+			vertFlags[v] = 1
+			found_nbr = False
+			for j in range(num_verts):
+				if A[v,j] and vertFlags[j]==0:
+					v = j
+					found_nbr = True
+					break
+			if not found_nbr:
+				found_poly = False
+				for j in range(num_verts):
+					if vertFlags[j]==0:
+						v = j
+						found_poly = True
+						poly_id += 1
+						points.append([])
+						break
+				if not found_poly:
+					break
+		im = Image.new('L', (w,h), 255)
+		imPxAccess = im.load()
+		draw = ImageDraw.Draw(im,'L')
+
+		for verts in points:
+			verts = tuple(tuple(x) for x in verts)
+			draw.polygon((verts),fill=0)
+		if out is not None and b == 0:
+			im.save(out)
+		image[b,0] = torch.Tensor(np.array(im)).cuda()
+	return image/255.0

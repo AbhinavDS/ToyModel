@@ -18,7 +18,7 @@ TAU = 0.05
 
 class Trainer:
 
-	def __init__(self, state_dim, action_dim, action_lim, ram, batch_size, critic_step=1):
+	def __init__(self, state_dim, action_dim, action_lim, ram, params, critic_step=1):
 		"""
 		:param state_dim: Dimensions of state (int)
 		:param action_dim: Dimension of action (int)
@@ -26,7 +26,8 @@ class Trainer:
 		:param ram: replay memory buffer object
 		:return:
 		"""
-		self.batch_size = batch_size
+		self.params = params
+		self.batch_size = params.batch_size
 		self.state_dim = state_dim
 		self.action_dim = action_dim
 		self.action_lim = action_lim
@@ -34,12 +35,12 @@ class Trainer:
 		self.iter = 0
 		self.noise = utils.OrnsteinUhlenbeckActionNoise(self.action_dim)
 
-		self.actor = model.Actor(self.state_dim, self.action_dim, self.action_lim)
-		self.target_actor = model.Actor(self.state_dim, self.action_dim, self.action_lim)
+		self.actor = model.Actor(self.state_dim, self.action_dim, self.action_lim, self.params)
+		self.target_actor = model.Actor(self.state_dim, self.action_dim, self.action_lim, self.params)
 		self.actor_optimizer = torch.optim.Adam(self.actor.parameters(),LEARNING_RATE)
 
-		self.critic = model.Critic(self.state_dim, self.action_dim)
-		self.target_critic = model.Critic(self.state_dim, self.action_dim)
+		self.critic = model.Critic(self.state_dim, self.action_dim, self.params)
+		self.target_critic = model.Critic(self.state_dim, self.action_dim, self.params)
 		self.critic_optimizer = torch.optim.Adam(self.critic.parameters(),LEARNING_RATE)
 		self.critic_step = critic_step
 

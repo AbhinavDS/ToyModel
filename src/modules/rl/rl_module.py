@@ -19,13 +19,13 @@ class RLModule:
 		self.path = os.path.join(self.path, self.prefix)
 
 		#S_DIM = 2*params.img_width + params.feature_size
-		# S_DIM = params.rl_image_resolution[0]*params.rl_image_resolution[1]*params.num_image_feats_layers + params.feature_size
-		S_DIM = params.rl_image_resolution[0]*params.rl_image_resolution[1] + params.feature_size
+		S_DIM = params.rl_image_resolution[0]*params.rl_image_resolution[1]*params.num_image_feats_layers_rl + params.feature_size
+		# S_DIM = params.rl_image_resolution[0]*params.rl_image_resolution[1] + params.feature_size
 		A_DIM = 4
 		A_MAX = 1
 
 		self.ram = buffer.MemoryBuffer(self.MAX_BUFFER)
-		self.trainer = rl_train.Trainer(S_DIM, A_DIM, A_MAX, self.ram, params.batch_size, critic_step=3)
+		self.trainer = rl_train.Trainer(S_DIM, A_DIM, A_MAX, self.ram, params, critic_step=3)
 		self._ep=0
 		
 	
